@@ -1,29 +1,45 @@
-"use strict"
-
-var shell = require("gl-now")
+var shell = require("gl-now")({tickRate: 2})
 var camera = require("game-shell-orbit-camera")(shell)
-var createPoints = require("gl-point-cloud")
+var createPoints = require("../pointcloud")
 var createAxes = require("gl-axes")
+var mat4 = require("gl-matrix").mat4
  
 var points, axes
 
 camera.lookAt(
-  [0,0,0],
-  [10,10,10],
+  [2,2,2],
+  [0.5,0.5,0.5],
   [0,1,0])
  
 shell.on("gl-init", function() {
   var gl = shell.gl
-  points = createPoints(gl, {
-    positions: [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
-    glyphs: [ "●", "■", "★" ]
-  })
+
+  var initialData = {
+    positions: [ [1, 0, -1], [0, 1, -1], [0, 0, 1], [1,1,-1], [1,0,1], [0,1,1] ],
+    glyphs: [  "▼", "★", "■", "◆", "✚", "✖" ],
+    colors: [ [0,1,0], [0,0,1], [1,1,0], [1,0,1], [0,1,1], [0,0,0] ],
+    size: 0.1
+  }
+
+  for(var i=0; i<100; ++i) {
+    var theta = i / 100.0 * 2.0 * Math.PI
+    var x = Math.cos(theta)
+    var y = Math.sin(theta)
+    initialData.positions.push([ x, y, 0 ])
+    initialData.glyphs.push("●")
+    initialData.colors.push([1, 0, 0])
+  }
+
+  points = createPoints(gl, initialData)
+
   axes = createAxes(gl, {
-    bounds: [[-1,-1,-1], [1,1,1]]
+    bounds: [[-1,-1, -1], [1,1,1]],
+    tickSpacing: [.1, .1, .1]
   })
 })
  
 shell.on("gl-render", function() {
+  var gl = shell.gl
   var cameraParams = {
     view: camera.view(),
     projection: mat4.perspective(
@@ -33,6 +49,8 @@ shell.on("gl-render", function() {
         0.1,
         1000.0)
   }
+  gl.enable(gl.DEPTH_TEST)
   points.draw(cameraParams)
+  
   axes.draw(cameraParams)
 })

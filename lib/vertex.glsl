@@ -1,5 +1,15 @@
-attribute vec4 position;
+attribute vec3 position;
+attribute vec3 color;
+attribute vec2 glyph;
+
+uniform mat4 model, view, projection;
+
+varying vec3 interpColor;
 
 void main() {
-  gl_Position = position;
+  vec4 worldPosition = model * vec4(position, 1);
+  vec4 viewPosition = view * worldPosition + vec4(glyph.x, -glyph.y, 0, 0);
+  vec4 clipPosition = projection * viewPosition;
+  gl_Position = clipPosition;
+  interpColor = color;
 }

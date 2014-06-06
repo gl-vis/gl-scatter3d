@@ -2,16 +2,17 @@
 
 var createBuffer = require("gl-buffer")
 var createVAO = require("gl-vao")
-var getGlyph = require("./lib/glyph.js")
+var getGlyph = require("./lib/glyphs")
+var glslify = require("glslify")
 
-var createShader = require("glslify")({
+var createShader = glslify({
   vertex: "./lib/vertex.glsl",
   fragment: "./lib/fragment.glsl"
 })
 
 module.exports = createPointCloud
 
-function PointCloud(gl, shader, pointBuffer, colorBuffer, glyphBuffer, colorBuffer, vao, vertexCount) {
+function PointCloud(gl, shader, pointBuffer, colorBuffer, glyphBuffer, vao, vertexCount) {
   this.gl = gl
   this.shader = shader
   this.pointBuffer = pointBuffer
@@ -66,6 +67,15 @@ proto.update = function(options) {
       color = [0,0,0]
     }
 
+    var size
+    if(options.sizes) {
+      size = options.sizes[i]
+    } else if(options.size) {
+      size = options.size
+    } else {
+      size = 1.0
+    }
+
     var x = points[i]
     var cells = glyphMesh.cells
     var positions = glyphMesh.positions
@@ -75,7 +85,14 @@ proto.update = function(options) {
       for(var k=0; k<3; ++k) {
         pointArray.push.apply(pointArray, x)
         colorArray.push.apply(colorArray, color)
-        glyphArray.push.apply(glyphArray, positions[k])
+        if(size === 1.0) {
+          glyphArray.push.apply(glyphArray, positions[c[k]])
+        } else {
+          var gp = positions[c[k]]
+          for(var l=0; l<2; ++l) {
+            glyphArray.push(size * gp[l])
+          }
+        }
       }
     }
   }
@@ -83,9 +100,9 @@ proto.update = function(options) {
   this.vertexCount = (pointArray.length / 3)|0
 
   //Update buffers
-  this.pointBuffer.update(pointData)
-  this.colorBuffer.update(colorData)
-  this.glyphBuffer.update(glyphData)
+  this.pointBuffer.update(pointArray)
+  this.colorBuffer.update(colorArray)
+  this.glyphBuffer.update(glyphArray)
 }
 
 proto.dispose = function() {
@@ -124,8 +141,7 @@ function createPointCloud(gl, options) {
     }
   ])
 
-  var pointCloud = new PointCloud(gl, shader, pointBuffer, colorBuffer, glyphBuffer, colorBuffer, vao)
+  var pointCloud = new PointCloud(gl, shader, pointBuffer, colorBuffer, glyphBuffer, vao, 0)
   pointCloud.update(options)
-
   return pointCloud
 }

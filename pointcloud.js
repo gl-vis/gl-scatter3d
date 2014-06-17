@@ -10,27 +10,36 @@ var createShader = glslify({
   fragment: "./lib/fragment.glsl"
 })
 
+var createOrthoShader = glslify({
+  vertex: "./lib/orthographic.glsl",
+  fragment: "./lib/fragment.glsl"
+})
+
 module.exports = createPointCloud
 
-function PointCloud(gl, shader, pointBuffer, colorBuffer, glyphBuffer, vao, vertexCount) {
+function PointCloud(gl, shader, orthoShader, pointBuffer, colorBuffer, glyphBuffer, vao, vertexCount) {
   this.gl = gl
   this.shader = shader
+  this.orthoShader = orthoShader
   this.pointBuffer = pointBuffer
   this.colorBuffer = colorBuffer
   this.glyphBuffer = glyphBuffer
   this.vao = vao
   this.vertexCount = vertexCount
+  this.useOrtho = false
 }
 
 var proto = PointCloud.prototype
 
 proto.draw = function(camera) {
   var gl = this.gl
-  this.shader.bind()
-  this.shader.uniforms = {
+  var shader = this.useOrtho ? this.orthoShader : this.shader
+  shader.bind()
+  shader.uniforms = {
     model: camera.model || [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ], 
     view: camera.view || [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ],
-    projection: camera.projection || [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ]
+    projection: camera.projection || [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ],
+    screenSize: [2.0/gl.drawingBufferWidth, 2.0/gl.drawingBufferHeight]
   }
   this.vao.bind()
   this.vao.draw(gl.TRIANGLES, this.vertexCount)
@@ -42,6 +51,10 @@ proto.update = function(options) {
   var points = options.positions
   if(!points) {
     throw new Error("Must specify points")
+  }
+
+  if("orthographic" in options) {
+    this.useOrtho = !!options.orthographic
   }
 
   //Build geometry
@@ -120,6 +133,11 @@ function createPointCloud(gl, options) {
   shader.attributes.color.location = 1
   shader.attributes.glyph.location = 2
 
+  var orthoShader = createOrthoShader(gl)
+  orthoShader.attributes.position.location = 0
+  orthoShader.attributes.color.location = 1
+  orthoShader.attributes.glyph.location = 2
+
   var pointBuffer = createBuffer(gl)
   var colorBuffer = createBuffer(gl)
   var glyphBuffer = createBuffer(gl)
@@ -141,7 +159,7 @@ function createPointCloud(gl, options) {
     }
   ])
 
-  var pointCloud = new PointCloud(gl, shader, pointBuffer, colorBuffer, glyphBuffer, vao, 0)
+  var pointCloud = new PointCloud(gl, shader, orthoShader, pointBuffer, colorBuffer, glyphBuffer, vao, 0)
   pointCloud.update(options)
   return pointCloud
 }

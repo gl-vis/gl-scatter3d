@@ -85,6 +85,7 @@ Updates the scatter plot object.  The parameter `options` is an object with the 
 * `color` A length 3 array encoding the color of the points in the scatter plot.  To set colors per point, use the `colors` option.  Default is `[0,0,0]`
 * `glyph` The glyph of each point.  This is a UTF8 string representing some shape.  Per point glyphs can be specified using the `glyphs` plural variant.  The default glyph is a circle, `"●"`.  For more glyph ideas, check out the [unicode character set](http://unicode-table.com/en/).  Some other fun suggestions: `"☢", "☯", "❤", "▲", "⚑"`. 
 * `size` The size of each point, or specified per-point using `sizes`.  Default is `1.0`
+* `orthographic` A flag, which if set to `true` causes the points to be drawn without perspective scaling.
 
 #### `points.draw(camera)`
 Draws the scatter plot with the given camera parameters.

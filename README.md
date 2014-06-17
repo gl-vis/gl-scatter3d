@@ -99,5 +99,10 @@ Draws the scatter plot with the given camera parameters.
 #### `points.dispose()`
 Destroys the scatter plot object and releases all stored resources.
 
+## Properties
+
+#### `points.bounds`
+Lower and upper bounds on the point cloud
+
 # Credits
 (c) 2014 Mikola Lysenko. MIT License.  Supported by [plot.ly](https://plot.ly/)

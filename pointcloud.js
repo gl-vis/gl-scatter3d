@@ -27,6 +27,7 @@ function PointCloud(gl, shader, orthoShader, pointBuffer, colorBuffer, glyphBuff
   this.vao = vao
   this.vertexCount = vertexCount
   this.useOrtho = false
+  this.bounds = [[0,0,0],[0,0,0]]
 }
 
 var proto = PointCloud.prototype
@@ -61,6 +62,8 @@ proto.update = function(options) {
   var pointArray = []
   var colorArray = []
   var glyphArray = []
+  var lowerBound = [ Infinity, Infinity, Infinity]
+  var upperBound = [-Infinity,-Infinity,-Infinity]
   for(var i=0; i<points.length; ++i) {
     var glyphMesh
     if(options.glyphs) {
@@ -90,6 +93,11 @@ proto.update = function(options) {
     }
 
     var x = points[i]
+    for(var j=0; j<3; ++j) {
+      upperBound[j] = Math.max(upperBound[j], x[j])
+      lowerBound[j] = Math.min(lowerBound[j], x[j]) 
+    }
+
     var cells = glyphMesh.cells
     var positions = glyphMesh.positions
 
@@ -116,6 +124,8 @@ proto.update = function(options) {
   this.pointBuffer.update(pointArray)
   this.colorBuffer.update(colorArray)
   this.glyphBuffer.update(glyphArray)
+
+  this.bounds = [lowerBound, upperBound]
 }
 
 proto.dispose = function() {

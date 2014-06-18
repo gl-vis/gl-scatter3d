@@ -44,22 +44,22 @@ shell.on("gl-init", function() {
 
 
 function updatePick(cameraParams) {
-  //Do a pass on the pick buffer to update point selections
+  //Update size of select buffer
   select.shape = [shell.height, shell.width]
+
+  //Begin pass, look for points within 30 pixels of mouse
   select.begin(shell.mouse[0], shell.mouse[1], 30)
 
   //Draw point cloud pick buffer
   points.drawPick(cameraParams)
 
-  //Retrieve closest point
+  //End pass, retrieve selection information
   var selected = select.end()
-  if(selected) {
 
-    //Look up id in scatter plot
-    var pointId = points.pick(selected.id)
-    if(pointId >= 0) {
-      points.highlight(pointId, [0,0,0])
-    }
+  //Look up point id in scatter plot, mark as highlighted
+  var pointId = points.pick(selected)
+  if(pointId >= 0) {
+    points.highlight(pointId, [0,0,0])
   } else {
     points.highlight()
   }

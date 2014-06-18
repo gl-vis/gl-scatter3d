@@ -150,10 +150,10 @@ Draws the scatter plot into a pick buffer for point selection purposes.
 
 * `camera` is a camera object, with the same properties as in `draw`
 
-#### `points.pick(pickId)`
-Given an id from the pick buffer, test if the selected value is one of the points in the point cloud.
+#### `points.pick(selected)`
+Finds the index of a point selected by some mouse coordinate. 
 
-* `pickId` is a 32 bit integer representing the picking value to test
+* `selected` is the selection information returned by calling end on a `gl-select` object
 
 **Returns** The index of the point in the point cloud which is selected, or `-1` if the index is not in the point cloud
 

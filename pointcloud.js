@@ -91,7 +91,11 @@ proto.drawPick = function(camera) {
   this.vao.unbind()
 }
 
-proto.pick = function(id) {
+proto.pick = function(selected) {
+  if(!selected) {
+    return -1
+  }
+  var id = selected.id
   if((id >>> 24) !== this.pickId) {
     return -1
   }

@@ -227,13 +227,18 @@ proto.update = function(options) {
 }
 
 proto.dispose = function() {
+  //Shaders
   this.shader.dispose()
   this.orthoShader.dispose()
   this.pickPerspectiveShader.dispose()
   this.pickOrthoShader.dispose()
+
+  //Vertex array
   this.vao.dispose()
+
+  //Buffers
   this.pointBuffer.dispose()
-  this.colorBUffer.dispose()
+  this.colorBuffer.dispose()
   this.glyphBuffer.dispose()
   this.idBuffer.dispose()
 }

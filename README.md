@@ -52,7 +52,7 @@ shell.on("gl-init", function() {
 })
 
 
-function updatePick(camera) {
+function updatePick(cameraParams) {
   //Do a pass on the pick buffer to update point selections
   select.shape = [shell.height, shell.width]
   select.begin(shell.mouse[0], shell.mouse[1], 30)
@@ -91,7 +91,7 @@ shell.on("gl-render", function() {
   gl.enable(gl.DEPTH_TEST)
 
   //Update point picking data
-  updatePick(camera)
+  updatePick(cameraParams)
 
   //Update camera
   points.draw(cameraParams)

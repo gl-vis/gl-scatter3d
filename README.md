@@ -124,6 +124,8 @@ Constructs a scatter plot with the given parameters.
 
 ## Method
 
+### Basic rendering
+
 #### `points.update(options)`
 Updates the scatter plot object.  The parameter `options` is an object with the following properties:
 
@@ -145,6 +147,8 @@ Draws the scatter plot with the given camera parameters.
 
 #### `points.dispose()`
 Destroys the scatter plot object and releases all stored resources.
+
+### Picking
 
 #### `points.drawPick(camera)`
 Draws the scatter plot into a pick buffer for point selection purposes.
@@ -170,6 +174,9 @@ If this function is called with no arguments, then it will deselect the currentl
 
 #### `points.bounds`
 Lower and upper bounds on the point cloud
+
+#### `points.clipBounds`
+A pair of arrays that determine lower and upper bounds on the scatter plot to draw.  These are useful for clipping the scatter plot to a smaller region.
 
 # Credits
 (c) 2014 Mikola Lysenko. MIT License.  Supported by [plot.ly](https://plot.ly/)

@@ -24,6 +24,14 @@ var createShader = glslify({
 
 module.exports = createPointCloud
 
+function clampVec(v) {
+  var result = new Array(3)
+  for(var i=0; i<3; ++i) {
+    result[i] = Math.min(Math.max(v[i], -1e8), 1e8)
+  }
+  return result
+}
+
 function PointCloud(
   gl, 
   shader, 
@@ -55,6 +63,8 @@ function PointCloud(
 
   this.highlightColor = [0,0,0]
   this.highlightId = [1,1,1,1]
+
+  this.clipBounds = [[-Infinity,-Infinity,-Infinity], [Infinity,Infinity,Infinity]]
 }
 
 var proto = PointCloud.prototype
@@ -69,7 +79,8 @@ proto.draw = function(camera) {
     projection: camera.projection || [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ],
     screenSize: [2.0/gl.drawingBufferWidth, 2.0/gl.drawingBufferHeight],
     highlightId: this.highlightId,
-    highlightColor: this.highlightColor
+    highlightColor: this.highlightColor,
+    clipBounds: this.clipBounds.map(clampVec)
   }
   this.vao.bind()
   this.vao.draw(gl.TRIANGLES, this.vertexCount)
@@ -84,7 +95,8 @@ proto.drawPick = function(camera) {
     model: camera.model || [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ], 
     view: camera.view || [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ],
     projection: camera.projection || [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ],
-    screenSize: [2.0/gl.drawingBufferWidth, 2.0/gl.drawingBufferHeight]
+    screenSize: [2.0/gl.drawingBufferWidth, 2.0/gl.drawingBufferHeight],
+    clipBounds: this.clipBounds.map(clampVec)
   }
   this.vao.bind()
   this.vao.draw(gl.TRIANGLES, this.vertexCount)
@@ -130,13 +142,14 @@ proto.update = function(options) {
   if(!points) {
     throw new Error("Must specify points")
   }
-
   if("orthographic" in options) {
     this.useOrtho = !!options.orthographic
   }
-
   if("pickId" in options) {
     this.pickId = options.pickId>>>0
+  }
+  if("clipBounds" in options) {
+    this.clipBounds = options.clipBounds
   }
 
   //Drawing geometry

@@ -11,8 +11,9 @@ varying vec3 worldCoordinate;
 
 void main() {
   vec4 worldPosition = model * vec4(position, 1);
-  vec4 viewPosition = view * worldPosition + vec4(glyph.x, -glyph.y, 0, 0);
-  vec4 clipPosition = projection * viewPosition;
+  vec4 viewPosition = view * worldPosition;
+  viewPosition = viewPosition / viewPosition.w;
+  vec4 clipPosition = projection * (viewPosition + vec4(glyph.x, -glyph.y, 0, 0));
   gl_Position = clipPosition;
   interpColor = color;
   pickId = id;

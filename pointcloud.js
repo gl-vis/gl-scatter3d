@@ -187,6 +187,8 @@ proto.update = function(options) {
       } else {
         color = colors
       }
+    } else {
+      color = [0,0,0]
     }
 
     var size
@@ -194,6 +196,8 @@ proto.update = function(options) {
       size = sizes[i]
     } else if(sizes) {
       size = sizes
+    } else {
+      size = 0.1
     }
 
     var x = points[i]

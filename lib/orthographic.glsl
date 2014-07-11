@@ -1,3 +1,5 @@
+precision mediump float;
+
 attribute vec3 position;
 attribute vec3 color;
 attribute vec2 glyph;
@@ -12,9 +14,10 @@ varying vec3 worldCoordinate;
 
 void main() {
   vec4 worldPosition = model * vec4(position, 1.0);
-  vec4 clipPosition = projection * view * worldPosition;
+  vec4 viewPosition = view * worldPosition;
+  vec4 clipPosition = projection * viewPosition;
   clipPosition /= clipPosition.w;
-  gl_Position = clipPosition + vec4(screenSize * glyph, 0, 0);
+  gl_Position = clipPosition + vec4(screenSize * vec2(glyph.x, -glyph.y), 0.0, 0.0);
   interpColor = color;
   pickId = id;
   worldCoordinate = worldPosition.xyz / worldPosition.w;

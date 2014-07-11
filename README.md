@@ -30,7 +30,7 @@ shell.on("gl-init", function() {
     glyph: [  "▼", "★", "■", "◆", "✚", "✖" ],
     color: [ [0,1,0], [0,0,1], [1,1,0], [1,0,1], [0,1,1], [0,0,0] ],
     size: 12,
-    orthographic: true,
+    orthographic: true
   }
 
   for(var i=0; i<100; ++i) {
@@ -132,7 +132,7 @@ Updates the scatter plot object.  The parameter `options` is an object with the 
 * `position` (Required) an array of length 3 arrays encoding the position of the points in the scatter plot.
 * `color` A length 3 array encoding the color of the points in the scatter plot.  To set colors per point, pass an array instead.  Default is `[0,0,0]`
 * `glyph` The glyph of each point.  This is a UTF8 string representing some shape.  Per point glyphs can be specified by passing an array.  The default glyph is a circle, `"●"`.  For more glyph ideas, check out the [unicode character set](http://unicode-table.com/en/).  Some other fun suggestions: `"☢", "☯", "❤", "▲", "⚑"`. 
-* `size` The size of each point, or specified per-point using an array.  Default is `1.0`
+* `size` The size of each point, or specified per-point using an array.  In orthographic, this is in screen coordinates, or in perspective this is in world coordinates. Default is `0.1`
 * `orthographic` A flag, which if set to `true` causes the points to be drawn without perspective scaling.
 * `pickId` An 8 bit value which determines the tag for all elements within the pick buffer
 

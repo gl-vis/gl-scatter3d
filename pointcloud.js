@@ -32,6 +32,11 @@ function clampVec(v) {
   return result
 }
 
+function ScatterPlotPickResult(index, position) {
+  this.index = index
+  this.position = position
+}
+
 function PointCloud(
   gl, 
   shader, 
@@ -57,6 +62,7 @@ function PointCloud(
   this.pickId = 0
   this.pickPerspectiveShader = pickPerspectiveShader
   this.pickOrthoShader = pickOrthoShader
+  this.points = []
 
   this.useOrtho = false
   this.bounds = [[0,0,0],[0,0,0]]
@@ -105,18 +111,16 @@ proto.drawPick = function(camera) {
 
 proto.pick = function(selected) {
   if(!selected) {
-    return -1
+    return null
   }
-  var id = selected.id
-  if((id >>> 24) !== this.pickId) {
-    return -1
+  if(selected.id !== this.pickId) {
+    return null
   }
-  var mask = (1<<24) - 1
-  var x = id & mask
-  if(x >= this.pointCount) {
-    return -1
+  var x = selected.value[2] + (selected.value[1]<<8) + (selected.value[0]<<16)
+  if(x >= this.pointCount || x < 0) {
+    return null
   }
-  return x
+  return new ScatterPlotPickResult(x, this.points[x].slice())
 }
 
 proto.highlight = function(pointId, color) {
@@ -156,6 +160,7 @@ proto.update = function(options) {
   var pointArray = []
   var colorArray = []
   var glyphArray = []
+  var pointData  = []
   var idArray = []
 
   //Bounds
@@ -206,6 +211,8 @@ proto.update = function(options) {
       lowerBound[j] = Math.min(lowerBound[j], x[j]) 
     }
 
+    pointData.push(x.slice())
+
     var cells = glyphMesh.cells
     var positions = glyphMesh.positions
 
@@ -242,6 +249,9 @@ proto.update = function(options) {
 
   //Update bounds
   this.bounds = [lowerBound, upperBound]
+
+  //Save points
+  this.points = pointData
 
   //Save number of points
   this.pointCount = points.length

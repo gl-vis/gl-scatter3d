@@ -66,9 +66,9 @@ function updatePick(cameraParams) {
   var selected = select.end()
 
   //Look up point id in scatter plot, mark as highlighted
-  var pointId = points.pick(selected)
-  if(pointId >= 0) {
-    points.highlight(pointId, [0,0,0])
+  var target = points.pick(selected)
+  if(target >= 0) {
+    points.highlight(target.index, [0,0,0])
   } else {
     points.highlight()
   }
@@ -160,7 +160,10 @@ Finds the index of a point selected by some mouse coordinate.
 
 * `selected` is the selection information returned by calling end on a `gl-select` object
 
-**Returns** The index of the point in the point cloud which is selected, or `-1` if the index is not in the point cloud
+**Returns** An object representing the highlighted point, or `null` if no point is selected. The object has the following properties:
+
+* `index` which is the index of the selected point
+* `position` which the 3D position of the selected point in data coordinates
 
 #### `points.highlight(pointId, highlightColor)`
 Highlights the point with index `pointId` in the scatter plot by changing its color to `highlightColor`

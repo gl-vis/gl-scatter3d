@@ -9,5 +9,5 @@ void main() {
   if(any(lessThan(worldCoordinate, clipBounds[0])) || any(greaterThan(worldCoordinate, clipBounds[1]))) {
       discard;
   }
-  gl_FragColor = pickId;
+  gl_FragColor = pickId.abgr;
 }

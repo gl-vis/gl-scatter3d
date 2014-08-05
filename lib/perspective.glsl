@@ -17,5 +17,6 @@ void main() {
   gl_Position = clipPosition;
   interpColor = color;
   pickId = id;
-  worldCoordinate = worldPosition.xyz / worldPosition.w;
+  //worldCoordinate = worldPosition.xyz / worldPosition.w;
+  worldCoordinate = position;
 }

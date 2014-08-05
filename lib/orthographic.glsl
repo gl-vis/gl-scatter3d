@@ -20,5 +20,6 @@ void main() {
   gl_Position = clipPosition + vec4(screenSize * vec2(glyph.x, -glyph.y), 0.0, 0.0);
   interpColor = color;
   pickId = id;
-  worldCoordinate = worldPosition.xyz / worldPosition.w;
+  //worldCoordinate = worldPosition.xyz / worldPosition.w;
+  worldCoordinate = position;
 }

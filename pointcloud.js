@@ -102,7 +102,8 @@ proto.drawPick = function(camera) {
     view: camera.view || [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ],
     projection: camera.projection || [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ],
     screenSize: [2.0/gl.drawingBufferWidth, 2.0/gl.drawingBufferHeight],
-    clipBounds: this.clipBounds.map(clampVec)
+    clipBounds: this.clipBounds.map(clampVec),
+    pickId: this.pickId
   }
   this.vao.bind()
   this.vao.draw(gl.TRIANGLES, this.vertexCount)

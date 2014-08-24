@@ -1,4 +1,4 @@
-precision highp float;
+precision mediump float;
 
 uniform vec4 highlightId;
 uniform vec3 highlightColor;

@@ -186,6 +186,10 @@ proto.update = function(options) {
     this.lineWidth = options.lineWidth
   }
 
+  //Text font
+  var font      = options.font      || 'normal'
+  var alignment = options.alignment || [0,0]
+
   //Drawing geometry
   var pointArray = []
   var colorArray = []
@@ -210,6 +214,7 @@ proto.update = function(options) {
   var glyphs     = options.glyph
   var colors     = options.color
   var sizes      = options.size
+  var angles     = options.angle
   var lineColors = options.lineColor
 
   function appendMarker(
@@ -221,7 +226,12 @@ proto.update = function(options) {
     color,
     size,
     cells,
-    positions) {
+    positions,
+    offset,
+    angle) {
+
+    var cos = Math.cos(angle)
+    var sin = Math.sin(angle)
 
     //Compute pick index for point
     for(var j=0; j<cells.length; ++j) {
@@ -231,9 +241,8 @@ proto.update = function(options) {
         colorBuf.push(color[0], color[1], color[2], color[3])
         idBuf.push(pickCounter)
         var x = positions[c[k]]
-        for(var l=0; l<2; ++l) {
-          glyphBuf.push(size * x[l])
-        }
+        glyphBuf.push(size * (cos*x[0]-sin*x[1]+offset[0]),
+                      size * (sin*x[0]+cos*x[1]+offset[1]))
       }
     }
   }
@@ -241,14 +250,15 @@ proto.update = function(options) {
   for(var i=0; i<points.length; ++i) {
     var glyphData
     if(Array.isArray(glyphs)) {
-      glyphData = getGlyph(glyphs[i])
+      glyphData = getGlyph(glyphs[i], font)
     } else if(glyphs) {
-      glyphData = getGlyph(glyphs)
+      glyphData = getGlyph(glyphs, font)
     } else {
-      glyphData = getGlyph('●')
+      glyphData = getGlyph('●', font)
     }
     var glyphMesh   = glyphData[0]
     var glyphLines  = glyphData[1]
+    var glyphBounds = glyphData[2]
 
     var color
     if(Array.isArray(colors)) {
@@ -284,7 +294,16 @@ proto.update = function(options) {
     } else if(sizes) {
       size = sizes
     } else {
-      size = 0.1
+      size = this.useOrtho ? 12 : 0.1
+    }
+
+    var angle
+    if(Array.isArray(angles)) {
+      angle = angles[i]
+    } else if(angles) {
+      angle = angles
+    } else {
+      angle = 0
     }
 
     var x = points[i]
@@ -294,6 +313,14 @@ proto.update = function(options) {
     }
     pointData.push(x.slice())
 
+    //Calculate text offset
+    var textOffset = [0,alignment[1]]
+    if(alignment[0] < 0) {
+      textOffset[0] = alignment[0] * glyphBounds[1][0]
+    } else if(alignment[0] > 0) {
+      textOffset[0] = -alignment[0] * glyphBounds[0][0]
+    }
+    
     appendMarker(
       pointArray, 
       colorArray, 
@@ -303,7 +330,9 @@ proto.update = function(options) {
       color, 
       size,
       glyphMesh.cells, 
-      glyphMesh.positions)
+      glyphMesh.positions,
+      textOffset,
+      angle)
 
     appendMarker(
       linePointArray, 
@@ -314,7 +343,9 @@ proto.update = function(options) {
       lineColor, 
       size,
       glyphLines.edges, 
-      glyphLines.positions)
+      glyphLines.positions,
+      textOffset,
+      angle)
 
     //Increment pickCounter
     pickCounter += 1

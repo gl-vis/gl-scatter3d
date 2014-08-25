@@ -1,10 +1,10 @@
 precision mediump float;
 
 uniform vec4 highlightId;
-uniform vec3 highlightColor;
+uniform vec4 highlightColor;
 uniform vec3 clipBounds[2];
 
-varying vec3 interpColor;
+varying vec4 interpColor;
 varying vec4 pickId;
 varying vec3 worldCoordinate;
 
@@ -13,8 +13,8 @@ void main() {
     discard;
   }
   if(distance(pickId, highlightId) < 0.001) {
-    gl_FragColor = vec4(highlightColor,1);
+    gl_FragColor = highlightColor;
   } else {
-    gl_FragColor = vec4(interpColor,1);
+    gl_FragColor = interpColor;
   }
 }

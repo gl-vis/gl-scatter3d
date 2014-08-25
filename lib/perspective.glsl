@@ -1,14 +1,14 @@
 precision mediump float;
 
 attribute vec3 position;
-attribute vec3 color;
+attribute vec4 color;
 attribute vec2 glyph;
 attribute vec4 id;
 
 uniform mat4 model, view, projection;
 uniform vec3 clipBounds[2];
 
-varying vec3 interpColor;
+varying vec4 interpColor;
 varying vec4 pickId;
 varying vec3 worldCoordinate;
 

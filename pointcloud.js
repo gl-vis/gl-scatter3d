@@ -76,7 +76,7 @@ function PointCloud(
   this.bounds   = [[0,0,0],
                    [0,0,0]]
 
-  this.highlightColor = [0,0,0]
+  this.highlightColor = [0,0,0,1]
   this.highlightId    = [1,1,1,1]
 
   this.clipBounds = [[-Infinity,-Infinity,-Infinity], 
@@ -149,16 +149,20 @@ proto.pick = function(selected) {
 proto.highlight = function(pointId, color) {
   if(typeof pointId !== "number") {
     this.highlightId = [1,1,1,1]
-    this.highlightColor = [0,0,0]
+    this.highlightColor = [0,0,0,1]
   } else {
     var a0 =  pointId     &0xff
     var a1 = (pointId>>8) &0xff
     var a2 = (pointId>>16)&0xff
     this.highlightId = [a0/255.0, a1/255.0, a2/255.0, this.pickId/255.0]
     if(color) {
-      this.highlightColor = color
+      if(color.length === 3) {
+        this.highlightColor = [color[0], color[1], color[2], 1]
+      } else {
+        this.highlightColor = color
+      }
     } else {
-      this.highlightColor = [0,0,0]
+      this.highlightColor = [0,0,0,1]
     }
   }
 }
@@ -224,7 +228,7 @@ proto.update = function(options) {
       var c = cells[j]
       for(var k=0; k<c.length; ++k) {
         pointBuf.push(point[0], point[1], point[2])
-        colorBuf.push(color[0], color[1], color[2])
+        colorBuf.push(color[0], color[1], color[2], color[3])
         idBuf.push(pickCounter)
         var x = positions[c[k]]
         for(var l=0; l<2; ++l) {
@@ -254,7 +258,10 @@ proto.update = function(options) {
         color = colors
       }
     } else {
-      color = [0,0,0]
+      color = [0,0,0,1]
+    }
+    if(color.length === 3) {
+      color = [color[0], color[1], color[2], 1]
     }
 
     var lineColor
@@ -266,6 +273,9 @@ proto.update = function(options) {
       }
     } else {
       lineColor = color
+    }
+    if(lineColor.length === 3) {
+      lineColor = [lineColor[0], lineColor[1], lineColor[2], 1]
     }
 
     var size
@@ -384,7 +394,7 @@ function createPointCloud(gl, options) {
     },
     {
       buffer: colorBuffer,
-      size: 3,
+      size: 4,
       type: gl.FLOAT
     },
     {

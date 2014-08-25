@@ -137,6 +137,9 @@ Updates the scatter plot object.  The parameter `options` is an object with the 
 * `pickId` An 8 bit value which determines the tag for all elements within the pick buffer
 * `lineWidth` the width of the outline (set to 0 for no outline) Default is `0`
 * `lineColor` the color of the outline for each marker
+* `font` the font used for drawing the glyphs (default `normal`)
+* `angle` an angle to rotate the glyphs by in radians (default `0`)
+* `alignment` a 2d vector to offset text drawing by (default `[0,0]`)
 
 #### `points.draw(camera)`
 Draws the scatter plot with the given camera parameters.

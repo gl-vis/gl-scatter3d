@@ -1,26 +1,31 @@
-"use strict"
+'use strict'
 
-var createBuffer = require("gl-buffer")
-var createVAO = require("gl-vao")
-var getGlyph = require("./lib/glyphs")
-var glslify = require("glslify")
+var createBuffer  = require('gl-buffer')
+var createVAO     = require('gl-vao')
+var glslify       = require('glslify')
+var getGlyph      = require('./lib/glyphs')
 
 var createShader = glslify({
-    vertex: "./lib/perspective.glsl",
-    fragment: "./lib/draw-fragment.glsl"
+    vertex:   './lib/perspective.glsl',
+    fragment: './lib/draw-fragment.glsl'
   }),
   createOrthoShader = glslify({
-    vertex: "./lib/orthographic.glsl",
-    fragment: "./lib/draw-fragment.glsl"
+    vertex:   './lib/orthographic.glsl',
+    fragment: './lib/draw-fragment.glsl'
   }),
   createPickPerspectiveShader = glslify({
-    vertex: "./lib/perspective.glsl",
-    fragment: "./lib/pick-fragment.glsl"
+    vertex:   './lib/perspective.glsl',
+    fragment: './lib/pick-fragment.glsl'
   }),
   createPickOrthoShader = glslify({
-    vertex: "./lib/orthographic.glsl",
-    fragment: "./lib/pick-fragment.glsl"
+    vertex:   './lib/orthographic.glsl',
+    fragment: './lib/pick-fragment.glsl'
   })
+
+var IDENTITY = [1,0,0,0,
+                0,1,0,0,
+                0,0,1,0,
+                0,0,0,1]
 
 module.exports = createPointCloud
 
@@ -49,47 +54,64 @@ function PointCloud(
   pickPerspectiveShader, 
   pickOrthoShader) {
 
-  this.gl = gl
-  this.shader = shader
-  this.orthoShader = orthoShader
-  this.pointBuffer = pointBuffer
-  this.colorBuffer = colorBuffer
-  this.glyphBuffer = glyphBuffer
-  this.idBuffer = idBuffer
-  this.vao = vao
-  this.vertexCount = 0
+  this.gl              = gl
+  this.shader          = shader
+  this.orthoShader     = orthoShader
+  this.pointBuffer     = pointBuffer
+  this.colorBuffer     = colorBuffer
+  this.glyphBuffer     = glyphBuffer
+  this.idBuffer        = idBuffer
+  this.vao             = vao
+  this.vertexCount     = 0
+  this.lineVertexCount = 0
+
+  this.lineWidth       = 0
   
-  this.pickId = 0
+  this.pickId                = 0
   this.pickPerspectiveShader = pickPerspectiveShader
-  this.pickOrthoShader = pickOrthoShader
-  this.points = []
+  this.pickOrthoShader       = pickOrthoShader
+  this.points                = []
 
   this.useOrtho = false
-  this.bounds = [[0,0,0],[0,0,0]]
+  this.bounds   = [[0,0,0],
+                   [0,0,0]]
 
   this.highlightColor = [0,0,0]
-  this.highlightId = [1,1,1,1]
+  this.highlightId    = [1,1,1,1]
 
-  this.clipBounds = [[-Infinity,-Infinity,-Infinity], [Infinity,Infinity,Infinity]]
+  this.clipBounds = [[-Infinity,-Infinity,-Infinity], 
+                     [ Infinity, Infinity, Infinity]]
 }
 
 var proto = PointCloud.prototype
 
 proto.draw = function(camera) {
-  var gl = this.gl
+  var gl     = this.gl
   var shader = this.useOrtho ? this.orthoShader : this.shader
+
+  gl.depthFunc(gl.LEQUAL)
+
   shader.bind()
   shader.uniforms = {
-    model: camera.model || [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ], 
-    view: camera.view || [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ],
-    projection: camera.projection || [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ],
-    screenSize: [2.0/gl.drawingBufferWidth, 2.0/gl.drawingBufferHeight],
-    highlightId: this.highlightId,
+    model:          camera.model      || IDENTITY,
+    view:           camera.view       || IDENTITY,
+    projection:     camera.projection || IDENTITY,
+    screenSize:     [2.0/gl.drawingBufferWidth, 2.0/gl.drawingBufferHeight],
+    highlightId:    this.highlightId,
     highlightColor: this.highlightColor,
-    clipBounds: this.clipBounds.map(clampVec)
+    clipBounds:     this.clipBounds.map(clampVec)
   }
+
   this.vao.bind()
+
+  //Draw interior
   this.vao.draw(gl.TRIANGLES, this.vertexCount)
+
+  if(this.lineWidth > 0) {
+    gl.lineWidth(this.lineWidth)
+    this.vao.draw(gl.LINES, this.lineVertexCount, this.vertexCount)
+  }
+
   this.vao.unbind()
 }
 
@@ -98,12 +120,12 @@ proto.drawPick = function(camera) {
   var shader = this.useOrtho ? this.pickOrthoShader : this.pickPerspectiveShader
   shader.bind()
   shader.uniforms = {
-    model: camera.model || [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ], 
-    view: camera.view || [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ],
-    projection: camera.projection || [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ],
-    screenSize: [2.0/gl.drawingBufferWidth, 2.0/gl.drawingBufferHeight],
-    clipBounds: this.clipBounds.map(clampVec),
-    pickId: this.pickId
+    model:        camera.model      || IDENTITY, 
+    view:         camera.view       || IDENTITY,
+    projection:   camera.projection || IDENTITY,
+    screenSize:   [2.0/gl.drawingBufferWidth, 2.0/gl.drawingBufferHeight],
+    clipBounds:   this.clipBounds.map(clampVec),
+    pickId:       this.pickId
   }
   this.vao.bind()
   this.vao.draw(gl.TRIANGLES, this.vertexCount)
@@ -145,24 +167,33 @@ proto.update = function(options) {
   //Create new buffers
   var points = options.position
   if(!points) {
-    throw new Error("Must specify points")
+    throw new Error('Must specify points')
   }
-  if("orthographic" in options) {
+  if('orthographic' in options) {
     this.useOrtho = !!options.orthographic
   }
-  if("pickId" in options) {
+  if('pickId' in options) {
     this.pickId = options.pickId>>>0
   }
-  if("clipBounds" in options) {
+  if('clipBounds' in options) {
     this.clipBounds = options.clipBounds
+  }
+  if('lineWidth' in options) {
+    this.lineWidth = options.lineWidth
   }
 
   //Drawing geometry
   var pointArray = []
   var colorArray = []
   var glyphArray = []
+  var idArray    = []
+
+  var linePointArray = []
+  var lineColorArray = []
+  var lineGlyphArray = []
+  var lineIdArray    = []
+
   var pointData  = []
-  var idArray = []
 
   //Bounds
   var lowerBound = [ Infinity, Infinity, Infinity]
@@ -172,19 +203,48 @@ proto.update = function(options) {
   var pickCounter = (this.pickId << 24)
 
   //Unpack options
-  var glyphs = options.glyph
-  var colors = options.color
-  var sizes = options.size
+  var glyphs     = options.glyph
+  var colors     = options.color
+  var sizes      = options.size
+  var lineColors = options.lineColor
+
+  function appendMarker(
+    pointBuf,
+    colorBuf,
+    glyphBuf,
+    idBuf,
+    point,
+    color,
+    size,
+    cells,
+    positions) {
+
+    //Compute pick index for point
+    for(var j=0; j<cells.length; ++j) {
+      var c = cells[j]
+      for(var k=0; k<c.length; ++k) {
+        pointBuf.push(point[0], point[1], point[2])
+        colorBuf.push(color[0], color[1], color[2])
+        idBuf.push(pickCounter)
+        var x = positions[c[k]]
+        for(var l=0; l<2; ++l) {
+          glyphBuf.push(size * x[l])
+        }
+      }
+    }
+  }
   
   for(var i=0; i<points.length; ++i) {
-    var glyphMesh
+    var glyphData
     if(Array.isArray(glyphs)) {
-      glyphMesh = getGlyph(glyphs[i])
+      glyphData = getGlyph(glyphs[i])
     } else if(glyphs) {
-      glyphMesh = getGlyph(glyphs)
+      glyphData = getGlyph(glyphs)
     } else {
-      glyphMesh = getGlyph("●")
+      glyphData = getGlyph('●')
     }
+    var glyphMesh   = glyphData[0]
+    var glyphLines  = glyphData[1]
 
     var color
     if(Array.isArray(colors)) {
@@ -195,6 +255,17 @@ proto.update = function(options) {
       }
     } else {
       color = [0,0,0]
+    }
+
+    var lineColor
+    if(Array.isArray(lineColors)) {
+      if(Array.isArray(lineColors[0])) {
+        lineColor = lineColors[i]
+      } else {
+        lineColor = lineColors
+      }
+    } else {
+      lineColor = color
     }
 
     var size
@@ -211,42 +282,43 @@ proto.update = function(options) {
       upperBound[j] = Math.max(upperBound[j], x[j])
       lowerBound[j] = Math.min(lowerBound[j], x[j]) 
     }
-
     pointData.push(x.slice())
 
-    var cells = glyphMesh.cells
-    var positions = glyphMesh.positions
+    appendMarker(
+      pointArray, 
+      colorArray, 
+      glyphArray, 
+      idArray, 
+      x, 
+      color, 
+      size,
+      glyphMesh.cells, 
+      glyphMesh.positions)
 
-    //Compute pick index for point
-    for(var j=0; j<cells.length; ++j) {
-      var c = cells[j]
-      for(var k=0; k<3; ++k) {
-        pointArray.push.apply(pointArray, x)
-        colorArray.push.apply(colorArray, color)
-        idArray.push(pickCounter)
-        if(size === 1.0) {
-          glyphArray.push.apply(glyphArray, positions[c[k]])
-        } else {
-          var gp = positions[c[k]]
-          for(var l=0; l<2; ++l) {
-            glyphArray.push(size * gp[l])
-          }
-        }
-      }
-    }
+    appendMarker(
+      linePointArray, 
+      lineColorArray, 
+      lineGlyphArray, 
+      lineIdArray, 
+      x, 
+      lineColor, 
+      size,
+      glyphLines.edges, 
+      glyphLines.positions)
 
     //Increment pickCounter
     pickCounter += 1
   }
 
   //Update vertex counts
-  this.vertexCount = (pointArray.length / 3)|0
+  this.vertexCount      = (pointArray.length / 3)|0
+  this.lineVertexCount  = (linePointArray.length/3)|0
   
   //Update buffers
-  this.pointBuffer.update(pointArray)
-  this.colorBuffer.update(colorArray)
-  this.glyphBuffer.update(glyphArray)
-  this.idBuffer.update(new Uint32Array(idArray))
+  this.pointBuffer.update(pointArray.concat(linePointArray))
+  this.colorBuffer.update(colorArray.concat(lineColorArray))
+  this.glyphBuffer.update(glyphArray.concat(lineGlyphArray))
+  this.idBuffer.update(new Uint32Array(idArray.concat(lineIdArray)))
 
   //Update bounds
   this.bounds = [lowerBound, upperBound]

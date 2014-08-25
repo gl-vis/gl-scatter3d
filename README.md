@@ -135,6 +135,8 @@ Updates the scatter plot object.  The parameter `options` is an object with the 
 * `size` The size of each point, or specified per-point using an array.  In orthographic, this is in screen coordinates, or in perspective this is in world coordinates. Default is `0.1`
 * `orthographic` A flag, which if set to `true` causes the points to be drawn without perspective scaling.
 * `pickId` An 8 bit value which determines the tag for all elements within the pick buffer
+* `lineWidth` the width of the outline (set to 0 for no outline) Default is `0`
+* `lineColor` the color of the outline for each marker
 
 #### `points.draw(camera)`
 Draws the scatter plot with the given camera parameters.

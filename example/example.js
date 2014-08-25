@@ -21,8 +21,10 @@ shell.on("gl-init", function() {
     position: [ [1, 0, -1], [0, 1, -1], [0, 0, 1], [1,1,-1], [1,0,1], [0,1,1] ],
     glyph: [  "▼", "★", "■", "◆", "✚", "✖" ],
     color: [ [0,1,0], [0,0,1], [1,1,0], [1,0,1], [0,1,1], [0,0,0] ],
-    size: 12,
+    size: 30,
     orthographic: true,
+    lineColor: [0,0,0],
+    lineWidth: 1
   }
 
   for(var i=0; i<100; ++i) {

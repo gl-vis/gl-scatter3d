@@ -212,7 +212,15 @@ proto.update = function(options) {
   //Count number of points and buffer size
   var numPoints   = points.length
 
+count_loop:
   for(var i=0; i<numPoints; ++i) {
+    var x = points[i]
+    for(var j=0; j<3; ++j) {
+      if(isNaN(x[j]) || !isFinite(x[j])) {
+        continue count_loop
+      }
+    }
+
     var glyphData
     if(Array.isArray(glyphs)) {
       glyphData = getGlyph(glyphs[i], font)
@@ -237,7 +245,6 @@ proto.update = function(options) {
   var glyphArray    = pool.mallocFloat(2*vertexCount)
   var idArray       = pool.mallocUint32(vertexCount)
 
-
   var textOffset = [0,alignment[1]]
 
   var triOffset  = 0
@@ -248,7 +255,19 @@ proto.update = function(options) {
   var isColorArray      = Array.isArray(colors)     && Array.isArray(colors[0])
   var isLineColorArray  = Array.isArray(lineColors) && Array.isArray(lineColors[0])
 
+fill_loop:
   for(var i=0; i<numPoints; ++i) {
+    var x = points[i]
+    for(var j=0; j<3; ++j) {
+      if(isNaN(x[j]) || !isFinite(x[j])) {
+        pickCounter += 1
+        continue fill_loop
+      }
+
+      upperBound[j] = Math.max(upperBound[j], x[j])
+      lowerBound[j] = Math.min(lowerBound[j], x[j]) 
+    }
+
     var glyphData
     if(Array.isArray(glyphs)) {
       glyphData = getGlyph(glyphs[i], font)

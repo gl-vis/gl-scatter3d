@@ -3,6 +3,7 @@
 var createBuffer  = require('gl-buffer')
 var createVAO     = require('gl-vao')
 var glslify       = require('glslify')
+var pool          = require('typedarray-pool')
 var getGlyph      = require('./lib/glyphs')
 
 var createShader = glslify({
@@ -171,7 +172,7 @@ proto.update = function(options) {
   //Create new buffers
   var points = options.position
   if(!points) {
-    throw new Error('Must specify points')
+    throw new Error('gl-scatter-plot: Must specify points')
   }
   if('orthographic' in options) {
     this.useOrtho = !!options.orthographic
@@ -190,26 +191,10 @@ proto.update = function(options) {
   var font      = options.font      || 'normal'
   var alignment = options.alignment || [0,0]
 
-  //Drawing geometry
-  var pointArray = []
-  var colorArray = []
-  var glyphArray = []
-  var idArray    = []
-
-  var linePointArray = []
-  var lineColorArray = []
-  var lineGlyphArray = []
-  var lineIdArray    = []
-
-  var pointData  = []
-
   //Bounds
   var lowerBound = [ Infinity, Infinity, Infinity]
   var upperBound = [-Infinity,-Infinity,-Infinity]
-
-  //Picking geometry
-  var pickCounter = (this.pickId << 24)
-
+  
   //Unpack options
   var glyphs     = options.glyph
   var colors     = options.color
@@ -217,37 +202,17 @@ proto.update = function(options) {
   var angles     = options.angle
   var lineColors = options.lineColor
 
-  function appendMarker(
-    pointBuf,
-    colorBuf,
-    glyphBuf,
-    idBuf,
-    point,
-    color,
-    size,
-    cells,
-    positions,
-    offset,
-    angle) {
+  //Picking geometry
+  var pickCounter = (this.pickId << 24)
 
-    var cos = Math.cos(angle)
-    var sin = Math.sin(angle)
+  //First do pass to compute buffer sizes
+  var triVertexCount     = 0
+  var lineVertexCount = 0
 
-    //Compute pick index for point
-    for(var j=0; j<cells.length; ++j) {
-      var c = cells[j]
-      for(var k=0; k<c.length; ++k) {
-        pointBuf.push(point[0], point[1], point[2])
-        colorBuf.push(color[0], color[1], color[2], color[3])
-        idBuf.push(pickCounter)
-        var x = positions[c[k]]
-        glyphBuf.push(size * (cos*x[0]-sin*x[1]+offset[0]),
-                      size * (sin*x[0]+cos*x[1]+offset[1]))
-      }
-    }
-  }
-  
-  for(var i=0; i<points.length; ++i) {
+  //Count number of points and buffer size
+  var numPoints   = points.length
+
+  for(var i=0; i<numPoints; ++i) {
     var glyphData
     if(Array.isArray(glyphs)) {
       glyphData = getGlyph(glyphs[i], font)
@@ -260,112 +225,188 @@ proto.update = function(options) {
     var glyphLines  = glyphData[1]
     var glyphBounds = glyphData[2]
 
-    var color
+    triVertexCount  += glyphMesh.cells.length * 3
+    lineVertexCount += glyphLines.edges.length * 2
+  }
+
+
+  //Preallocate data
+  var vertexCount   = triVertexCount + lineVertexCount
+  var positionArray = pool.mallocFloat(3*vertexCount)
+  var colorArray    = pool.mallocFloat(4*vertexCount)
+  var glyphArray    = pool.mallocFloat(2*vertexCount)
+  var idArray       = pool.mallocUint32(vertexCount)
+
+
+  var textOffset = [0,alignment[1]]
+
+  var triOffset  = 0
+  var lineOffset = triVertexCount
+  var color      = [0,0,0,1]
+  var lineColor  = [0,0,0,1]
+
+  var isColorArray      = Array.isArray(colors)     && Array.isArray(colors[0])
+  var isLineColorArray  = Array.isArray(lineColors) && Array.isArray(lineColors[0])
+
+  for(var i=0; i<numPoints; ++i) {
+    var glyphData
+    if(Array.isArray(glyphs)) {
+      glyphData = getGlyph(glyphs[i], font)
+    } else if(glyphs) {
+      glyphData = getGlyph(glyphs, font)
+    } else {
+      glyphData = getGlyph('●', font)
+    }
+    var glyphMesh   = glyphData[0]
+    var glyphLines  = glyphData[1]
+    var glyphBounds = glyphData[2]
+
+
+    //Get color
     if(Array.isArray(colors)) {
-      if(Array.isArray(colors[0])) {
-        color = colors[i]
+      var c
+      if(isColorArray) {
+        c = colors[i]
       } else {
-        color = colors
+        c = colors
+      }
+      if(c.length === 3) {
+        for(var j=0; j<3; ++j) {
+          color[j] = c[j]
+        }
+        color[3] = 1
+      } else if(c.length === 4) {
+        for(var j=0; j<4; ++j) {
+          color[j] = c[j]
+        }
       }
     } else {
-      color = [0,0,0,1]
-    }
-    if(color.length === 3) {
-      color = [color[0], color[1], color[2], 1]
+      color[0] = color[1] = color[2] = 0
+      color[3] = 1
     }
 
-    var lineColor
+    //Get lineColor
+    var c = color
     if(Array.isArray(lineColors)) {
-      if(Array.isArray(lineColors[0])) {
-        lineColor = lineColors[i]
+      if(isLineColorArray) {
+        c = lineColors[i]
       } else {
-        lineColor = lineColors
+        c = lineColors
       }
     } else {
-      lineColor = color
+      c = color
     }
-    if(lineColor.length === 3) {
-      lineColor = [lineColor[0], lineColor[1], lineColor[2], 1]
+    if(c.length === 3) {
+      for(var j=0; j<3; ++j) {
+        lineColor[j] = c[j]
+      }
+      lineColor[j] = 1
+    } else if(c.length === 4) {
+      for(var j=0; j<4; ++j) {
+        lineColor[j] = c[j]
+      }
     }
 
-    var size
+    var size = 0.5
     if(Array.isArray(sizes)) {
-      size = sizes[i]
+      size = +sizes[i]
     } else if(sizes) {
-      size = sizes
-    } else {
-      size = this.useOrtho ? 12 : 0.1
+      size = +sizes
+    } else if(this.useOrtho) {
+      size = 12
     }
 
-    var angle
+    var angle = 0
     if(Array.isArray(angles)) {
-      angle = angles[i]
+      angle = +angles[i]
     } else if(angles) {
-      angle = angles
-    } else {
-      angle = 0
+      angle = +angles
     }
+
+    //Loop through markers and append to buffers
+    var cos = Math.cos(angle)
+    var sin = Math.sin(angle)
 
     var x = points[i]
     for(var j=0; j<3; ++j) {
       upperBound[j] = Math.max(upperBound[j], x[j])
       lowerBound[j] = Math.min(lowerBound[j], x[j]) 
     }
-    pointData.push(x.slice())
 
     //Calculate text offset
-    var textOffset = [0,alignment[1]]
     if(alignment[0] < 0) {
-      textOffset[0] = alignment[0] * glyphBounds[1][0]
+      textOffset[0] = alignment[0]  * (1+glyphBounds[1][0])
     } else if(alignment[0] > 0) {
-      textOffset[0] = -alignment[0] * glyphBounds[0][0]
+      textOffset[0] = -alignment[0] * (1+glyphBounds[0][0])
     }
-    
-    appendMarker(
-      pointArray, 
-      colorArray, 
-      glyphArray, 
-      idArray, 
-      x, 
-      color, 
-      size,
-      glyphMesh.cells, 
-      glyphMesh.positions,
-      textOffset,
-      angle)
 
-    appendMarker(
-      linePointArray, 
-      lineColorArray, 
-      lineGlyphArray, 
-      lineIdArray, 
-      x, 
-      lineColor, 
-      size,
-      glyphLines.edges, 
-      glyphLines.positions,
-      textOffset,
-      angle)
+
+    //Write out inner marker
+    var cells = glyphMesh.cells
+    var verts = glyphMesh.positions
+
+    for(var j=0; j<cells.length; ++j) {
+      var cell = cells[j]
+      for(var k=0; k<3; ++k) {
+        for(var l=0; l<3; ++l) {
+          positionArray[3*triOffset+l] = x[l]
+        }
+        for(var l=0; l<4; ++l) {
+          colorArray[4*triOffset+l] = color[l]
+        }
+        idArray[triOffset] = pickCounter
+        var p = verts[cell[k]]
+        glyphArray[2*triOffset]   = size * (cos*p[0] - sin*p[1] + textOffset[0])
+        glyphArray[2*triOffset+1] = size * (sin*p[0] + cos*p[1] + textOffset[1])
+        triOffset += 1
+      }
+    }
+
+    var cells = glyphLines.edges
+    var verts = glyphLines.positions
+
+    for(var j=0; j<cells.length; ++j) {
+      var cell = cells[j]
+      for(var k=0; k<2; ++k) {
+        for(var l=0; l<3; ++l) {
+          positionArray[3*lineOffset+l] = x[l]
+        }
+        for(var l=0; l<4; ++l) {
+          colorArray[4*lineOffset+l] = color[l]
+        }
+        idArray[lineOffset] = pickCounter
+        var p = verts[cell[k]]
+        glyphArray[2*lineOffset]   = size * (cos*p[0] - sin*p[1] + textOffset[0])
+        glyphArray[2*lineOffset+1] = size * (sin*p[0] + cos*p[1] + textOffset[1])
+        lineOffset += 1
+      }
+    }
 
     //Increment pickCounter
     pickCounter += 1
   }
+  
 
   //Update vertex counts
-  this.vertexCount      = (pointArray.length / 3)|0
-  this.lineVertexCount  = (linePointArray.length/3)|0
+  this.vertexCount      = triVertexCount
+  this.lineVertexCount  = lineVertexCount
   
   //Update buffers
-  this.pointBuffer.update(pointArray.concat(linePointArray))
-  this.colorBuffer.update(colorArray.concat(lineColorArray))
-  this.glyphBuffer.update(glyphArray.concat(lineGlyphArray))
-  this.idBuffer.update(new Uint32Array(idArray.concat(lineIdArray)))
+  this.pointBuffer.update(positionArray)
+  this.colorBuffer.update(colorArray)
+  this.glyphBuffer.update(glyphArray)
+  this.idBuffer.update(new Uint32Array(idArray))
+
+  pool.free(positionArray)
+  pool.free(colorArray)
+  pool.free(glyphArray)
+  pool.free(idArray)
 
   //Update bounds
   this.bounds = [lowerBound, upperBound]
 
   //Save points
-  this.points = pointData
+  this.points = points
 
   //Save number of points
   this.pointCount = points.length

@@ -360,7 +360,6 @@ fill_loop:
       textOffset[0] = -alignment[0] * (1+glyphBounds[0][0])
     }
 
-
     //Write out inner marker
     var cells = glyphMesh.cells
     var verts = glyphMesh.positions
@@ -423,6 +422,12 @@ fill_loop:
   pool.free(idArray)
 
   //Update bounds
+  for(var i=0; i<3; ++i) {
+    if(lowerBounds[i] > upperBound[i]) {
+      lowerBound[i] = -Infinity
+      upperBound[i] =  Infinity
+    }
+  }
   this.bounds = [lowerBound, upperBound]
 
   //Save points

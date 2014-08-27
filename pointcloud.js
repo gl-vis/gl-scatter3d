@@ -286,25 +286,26 @@ proto.update = function(options) {
     }
 
     //Get lineColor
-    var c = color
     if(Array.isArray(lineColors)) {
+      var c
       if(isLineColorArray) {
         c = lineColors[i]
       } else {
         c = lineColors
       }
+      if(c.length === 3) {
+        for(var j=0; j<3; ++j) {
+          lineColor[j] = c[j]
+        }
+        lineColor[j] = 1
+      } else if(c.length === 4) {
+        for(var j=0; j<4; ++j) {
+          lineColor[j] = c[j]
+        }
+      }
     } else {
-      c = color
-    }
-    if(c.length === 3) {
-      for(var j=0; j<3; ++j) {
-        lineColor[j] = c[j]
-      }
-      lineColor[j] = 1
-    } else if(c.length === 4) {
-      for(var j=0; j<4; ++j) {
-        lineColor[j] = c[j]
-      }
+      lineColor[0] = lineColor[1] = lineColor[2] = 0
+      lineColor[3] = 1
     }
 
     var size = 0.5
@@ -372,7 +373,7 @@ proto.update = function(options) {
           positionArray[3*lineOffset+l] = x[l]
         }
         for(var l=0; l<4; ++l) {
-          colorArray[4*lineOffset+l] = color[l]
+          colorArray[4*lineOffset+l] = lineColor[l]
         }
         idArray[lineOffset] = pickCounter
         var p = verts[cell[k]]

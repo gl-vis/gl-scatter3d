@@ -140,6 +140,8 @@ Updates the scatter plot object.  The parameter `options` is an object with the 
 * `font` the font used for drawing the glyphs (default `normal`)
 * `angle` an angle to rotate the glyphs by in radians (default `0`)
 * `alignment` a 2d vector to offset text drawing by (default `[0,0]`)
+* `project` a flag (or array of flags) which determines which axes to project onto
+* `axisBounds` a pair of 3d arrays representing the bounds of the axes to project onto
 
 #### `points.draw(camera)`
 Draws the scatter plot with the given camera parameters.

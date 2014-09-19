@@ -300,10 +300,15 @@ proto.update = function(options) {
     this.lineWidth = options.lineWidth
   }
   if('project' in options) {
-    this.axesProject = options.axesProject
+    if(Array.isArray(options.project)) {
+      var v = !!options.project
+      this.axesProject = [v,v,v]
+    } else {
+      this.axesProject = options.project
+    }
   }
-  if('axesBounds' in options) {
-    this.axesBounds = options.axesBounds
+  if('axisBounds' in options) {
+    this.axesBounds = options.axisBounds
   }
 
   //Text font

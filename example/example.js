@@ -25,7 +25,8 @@ shell.on("gl-init", function() {
     size: 30,
     orthographic: true,
     lineColor: [0,0,0],
-    lineWidth: 1
+    lineWidth: 1,
+    project: [true, true, true]
   }
 
   for(var i=0; i<100; ++i) {

@@ -24,12 +24,13 @@ camera.lookAt(
 shell.on("gl-init", function() {
   var gl = shell.gl
 
+  //Initialize point cloud
   var initialData = {
     position: [ [1, 0, -1], [0, 1, -1], [0, 0, 1], [1,1,-1], [1,0,1], [0,1,1] ],
     glyph: [  "▼", "★", "■", "◆", "✚", "✖" ],
     color: [ [0,1,0], [0,0,1], [1,1,0], [1,0,1], [0,1,1], [0,0,0] ],
     size: 12,
-    orthographic: true,
+    orthographic: true
   }
 
   for(var i=0; i<100; ++i) {
@@ -51,33 +52,32 @@ shell.on("gl-init", function() {
   select = createSelect(gl, [shell.height, shell.width])
 })
 
-
 function updatePick(cameraParams) {
-  //Do a pass on the pick buffer to update point selections
+  //Update size of select buffer
   select.shape = [shell.height, shell.width]
+
+  //Begin pass, look for points within 30 pixels of mouse
   select.begin(shell.mouse[0], shell.mouse[1], 30)
 
   //Draw point cloud pick buffer
   points.drawPick(cameraParams)
 
-  //Retrieve closest point
+  //End pass, retrieve selection information
   var selected = select.end()
-  if(selected) {
 
-    //Look up id in scatter plot
-    var pointId = points.pick(selected.id)
-    if(pointId >= 0) {
-      points.highlight(pointId, [0,0,0])
-    }
+  //Look up point id in scatter plot, mark as highlighted
+  var target = points.pick(selected)
+  if(target >= 0) {
+    points.highlight(target.index, [0,0,0])
   } else {
     points.highlight()
   }
 }
-
  
 shell.on("gl-render", function() {
   var gl = shell.gl
 
+  //Compute camera paramters
   var cameraParams = {
     view: camera.view(),
     projection: mat4.perspective(
@@ -88,6 +88,7 @@ shell.on("gl-render", function() {
         1000.0)
   }
 
+  //Turn on z-buffer
   gl.enable(gl.DEPTH_TEST)
 
   //Update point picking data
@@ -123,15 +124,24 @@ Constructs a scatter plot with the given parameters.
 
 ## Method
 
+### Basic rendering
+
 #### `points.update(options)`
 Updates the scatter plot object.  The parameter `options` is an object with the following properties:
 
 * `position` (Required) an array of length 3 arrays encoding the position of the points in the scatter plot.
 * `color` A length 3 array encoding the color of the points in the scatter plot.  To set colors per point, pass an array instead.  Default is `[0,0,0]`
 * `glyph` The glyph of each point.  This is a UTF8 string representing some shape.  Per point glyphs can be specified by passing an array.  The default glyph is a circle, `"●"`.  For more glyph ideas, check out the [unicode character set](http://unicode-table.com/en/).  Some other fun suggestions: `"☢", "☯", "❤", "▲", "⚑"`. 
-* `size` The size of each point, or specified per-point using an array.  Default is `1.0`
+* `size` The size of each point, or specified per-point using an array.  In orthographic, this is in screen coordinates, or in perspective this is in world coordinates. Default is `0.1`
 * `orthographic` A flag, which if set to `true` causes the points to be drawn without perspective scaling.
 * `pickId` An 8 bit value which determines the tag for all elements within the pick buffer
+* `lineWidth` the width of the outline (set to 0 for no outline) Default is `0`
+* `lineColor` the color of the outline for each marker
+* `font` the font used for drawing the glyphs (default `normal`)
+* `angle` an angle to rotate the glyphs by in radians (default `0`)
+* `alignment` a 2d vector to offset text drawing by (default `[0,0]`)
+* `project` a flag (or array of flags) which determines which axes to project onto
+* `axisBounds` a pair of 3d arrays representing the bounds of the axes to project onto
 
 #### `points.draw(camera)`
 Draws the scatter plot with the given camera parameters.
@@ -145,17 +155,22 @@ Draws the scatter plot with the given camera parameters.
 #### `points.dispose()`
 Destroys the scatter plot object and releases all stored resources.
 
+### Picking
+
 #### `points.drawPick(camera)`
 Draws the scatter plot into a pick buffer for point selection purposes.
 
 * `camera` is a camera object, with the same properties as in `draw`
 
-#### `points.pick(pickId)`
-Given an id from the pick buffer, test if the selected value is one of the points in the point cloud.
+#### `points.pick(selected)`
+Finds the index of a point selected by some mouse coordinate. 
 
-* `pickId` is a 32 bit integer representing the picking value to test
+* `selected` is the selection information returned by calling end on a `gl-select` object
 
-**Returns** The index of the point in the point cloud which is selected, or `-1` if the index is not in the point cloud
+**Returns** An object representing the highlighted point, or `null` if no point is selected. The object has the following properties:
+
+* `index` which is the index of the selected point
+* `position` which the 3D position of the selected point in data coordinates
 
 #### `points.highlight(pointId, highlightColor)`
 Highlights the point with index `pointId` in the scatter plot by changing its color to `highlightColor`
@@ -169,6 +184,9 @@ If this function is called with no arguments, then it will deselect the currentl
 
 #### `points.bounds`
 Lower and upper bounds on the point cloud
+
+#### `points.clipBounds`
+A pair of arrays that determine lower and upper bounds on the scatter plot to draw.  These are useful for clipping the scatter plot to a smaller region.
 
 # Credits
 (c) 2014 Mikola Lysenko. MIT License.  Supported by [plot.ly](https://plot.ly/)

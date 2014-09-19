@@ -11,7 +11,7 @@ uniform vec3 clipBounds[2];
 
 varying vec4 interpColor;
 varying vec4 pickId;
-varying vec3 worldCoordinate;
+varying vec3 dataCoordinate;
 
 void main() {
   if(any(lessThan(position, clipBounds[0])) || any(greaterThan(position, clipBounds[1]))) {
@@ -21,9 +21,10 @@ void main() {
     vec4 viewPosition = view * worldPosition;
     vec4 clipPosition = projection * viewPosition;
     clipPosition /= clipPosition.w;
+    
     gl_Position = clipPosition + vec4(screenSize * vec2(glyph.x, -glyph.y), 0.0, 0.0);
     interpColor = color;
     pickId = id;
-    worldCoordinate = position;
+    dataCoordinate = position;
   }
 }

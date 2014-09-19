@@ -4,6 +4,10 @@ var createBuffer  = require('gl-buffer')
 var createVAO     = require('gl-vao')
 var glslify       = require('glslify')
 var pool          = require('typedarray-pool')
+var getCubeParams = require('gl-axes/lib/cube')
+var mat4          = require('gl-mat4')
+var vec4          = require('gl-matrix').vec4
+var vec3          = require('gl-matrix').vec3
 var getGlyph      = require('./lib/glyphs')
 
 var createShader = glslify({
@@ -14,12 +18,20 @@ var createShader = glslify({
     vertex:   './lib/orthographic.glsl',
     fragment: './lib/draw-fragment.glsl'
   }),
+  createProjectShader = glslify({
+    vertex:   './lib/projection.glsl',
+    fragment: './lib/draw-fragment.glsl'
+  }),
   createPickPerspectiveShader = glslify({
     vertex:   './lib/perspective.glsl',
     fragment: './lib/pick-fragment.glsl'
   }),
   createPickOrthoShader = glslify({
     vertex:   './lib/orthographic.glsl',
+    fragment: './lib/pick-fragment.glsl'
+  }),
+  createPickProjectShader = glslify({
+    vertex:   './lib/projection.glsl',
     fragment: './lib/pick-fragment.glsl'
   })
 
@@ -29,6 +41,12 @@ var IDENTITY = [1,0,0,0,
                 0,0,0,1]
 
 module.exports = createPointCloud
+
+function project(p, v, m, x) {
+  vec4.transformMat4(x, x, m)
+  vec4.transformMat4(x, x, v)
+  return vec4.transformMat4(x, x, p)
+}
 
 function clampVec(v) {
   var result = new Array(3)
@@ -47,17 +65,22 @@ function PointCloud(
   gl, 
   shader, 
   orthoShader, 
+  projectShader,
   pointBuffer, 
   colorBuffer, 
   glyphBuffer,
   idBuffer,
   vao, 
   pickPerspectiveShader, 
-  pickOrthoShader) {
+  pickOrthoShader,
+  pickProjectShader) {
 
   this.gl              = gl
+
   this.shader          = shader
   this.orthoShader     = orthoShader
+  this.projectShader   = projectShader
+
   this.pointBuffer     = pointBuffer
   this.colorBuffer     = colorBuffer
   this.glyphBuffer     = glyphBuffer
@@ -71,11 +94,18 @@ function PointCloud(
   this.pickId                = 0
   this.pickPerspectiveShader = pickPerspectiveShader
   this.pickOrthoShader       = pickOrthoShader
+  this.pickProjectShader     = pickProjectShader
   this.points                = []
 
   this.useOrtho = false
-  this.bounds   = [[0,0,0],
-                   [0,0,0]]
+  this.bounds   = [[ Infinity,Infinity,Infinity],
+                   [-Infinity,-Infinity,-Infinity]]
+
+  //Axes projections
+  this.axesProject = [ false, false, false ]
+  this.axesBounds = [[-Infinity,-Infinity,-Infinity],
+                     [ Infinity, Infinity, Infinity]]
+
 
   this.highlightColor = [0,0,0,1]
   this.highlightId    = [1,1,1,1]
@@ -86,10 +116,96 @@ function PointCloud(
 
 var proto = PointCloud.prototype
 
-proto.draw = function(camera) {
-  var gl     = this.gl
-  var shader = this.useOrtho ? this.orthoShader : this.shader
+function drawProject(shader, points, camera) {
+  var axesProject = points.axesProject
+  if(!(axesProject[0] || axesProject[1] || axesProject[2])) {
+    return
+  }
 
+  var gl         = points.gl
+  var uniforms   = shader.uniforms
+  var model      = camera.model      || IDENTITY
+  var view       = camera.view       || IDENTITY
+  var projection = camera.projection || IDENTITY
+  var bounds     = points.axesBounds
+  var clipBounds = points.clipBounds.map(clampVec)
+  var cubeParams = getCubeParams(model, view, projection, bounds)
+  var cubeAxis   = cubeParams.axis
+
+  shader.bind()
+  uniforms.view           = view
+  uniforms.projection     = projection
+  uniforms.screenSize     = [2.0/gl.drawingBufferWidth, 2.0/gl.drawingBufferHeight]
+  uniforms.highlightId    = points.highlightId
+  uniforms.highlightColor = points.highlightColor
+  uniforms.clipBounds     = clipBounds
+
+  for(var i=0; i<3; ++i) {
+    if(!axesProject[i]) {
+      continue
+    }
+
+    //Project model matrix
+    var pmodel = IDENTITY.slice()
+    pmodel[5*i] = 0
+    if(cubeAxis[i] < 0) {
+      pmodel[12+i] = bounds[0][i]
+    } else {
+      pmodel[12+i] = bounds[1][i]
+    }
+    mat4.multiply(pmodel, model, pmodel)
+    uniforms.model = pmodel
+
+    //Compute initial axes
+    var u = (i+1)%3
+    var v = (i+2)%3
+    var du = [0,0,0]
+    var dv = [0,0,0]
+    du[u] = 1
+    dv[v] = 1
+
+    //Align orientation relative to viewer
+    var mdu = project(projection, view, model, [du[0],du[1],du[2],0])
+    var mdv = project(projection, view, model, [dv[0],dv[1],dv[2],0])
+    if(Math.abs(mdu[1]) > Math.abs(mdv[1])) {
+      var tmp = mdu
+      mdu = mdv
+      mdv = tmp
+      tmp = du
+      du = dv
+      dv = tmp
+      var t = u
+      u = v
+      v = t
+    }
+    if(mdu[0] < 0) {
+      du[u] = -1
+    }
+    if(mdv[1] > 0) {
+      dv[v] = -1
+    }
+    uniforms.axes = [du, dv]
+
+    //Update fragment clip bounds
+    var fragClip = [clipBounds[0].slice(), clipBounds[1].slice()]
+    fragClip[0][i] = -1e8
+    fragClip[1][i] = 1e8
+    uniforms.fragClipBounds = fragClip
+
+    //Draw interior
+    points.vao.draw(gl.TRIANGLES, points.vertexCount)
+
+    //Draw edges
+    if(points.lineWidth > 0) {
+      gl.lineWidth(points.lineWidth)
+      points.vao.draw(gl.LINES, points.lineVertexCount, points.vertexCount)
+    }
+  }
+}
+
+
+function drawFull(shader, pshader, points, camera) {
+  var gl = points.gl
   gl.depthFunc(gl.LEQUAL)
 
   shader.bind()
@@ -98,39 +214,36 @@ proto.draw = function(camera) {
     view:           camera.view       || IDENTITY,
     projection:     camera.projection || IDENTITY,
     screenSize:     [2.0/gl.drawingBufferWidth, 2.0/gl.drawingBufferHeight],
-    highlightId:    this.highlightId,
-    highlightColor: this.highlightColor,
-    clipBounds:     this.clipBounds.map(clampVec)
+    highlightId:    points.highlightId,
+    highlightColor: points.highlightColor,
+    clipBounds:     points.clipBounds.map(clampVec),
+    fragClipBounds: [[-1e8,-1e8,-1e8],[1e8,1e8,1e8]]
   }
 
-  this.vao.bind()
+  points.vao.bind()
 
   //Draw interior
-  this.vao.draw(gl.TRIANGLES, this.vertexCount)
+  points.vao.draw(gl.TRIANGLES, points.vertexCount)
 
-  if(this.lineWidth > 0) {
-    gl.lineWidth(this.lineWidth)
-    this.vao.draw(gl.LINES, this.lineVertexCount, this.vertexCount)
+  //Draw edges
+  if(points.lineWidth > 0) {
+    gl.lineWidth(points.lineWidth)
+    points.vao.draw(gl.LINES, points.lineVertexCount, points.vertexCount)
   }
 
-  this.vao.unbind()
+  drawProject(pshader, points, camera)
+
+  points.vao.unbind()
+}
+
+proto.draw = function(camera) {
+  var shader = this.useOrtho ? this.orthoShader : this.shader
+  drawFull(shader, this.projectShader, this, camera)
 }
 
 proto.drawPick = function(camera) {
-  var gl = this.gl
   var shader = this.useOrtho ? this.pickOrthoShader : this.pickPerspectiveShader
-  shader.bind()
-  shader.uniforms = {
-    model:        camera.model      || IDENTITY, 
-    view:         camera.view       || IDENTITY,
-    projection:   camera.projection || IDENTITY,
-    screenSize:   [2.0/gl.drawingBufferWidth, 2.0/gl.drawingBufferHeight],
-    clipBounds:   this.clipBounds.map(clampVec),
-    pickId:       this.pickId
-  }
-  this.vao.bind()
-  this.vao.draw(gl.TRIANGLES, this.vertexCount)
-  this.vao.unbind()
+  drawFull(shader, this.pickProjectShader, this, camera)
 }
 
 proto.pick = function(selected) {
@@ -185,6 +298,12 @@ proto.update = function(options) {
   }
   if('lineWidth' in options) {
     this.lineWidth = options.lineWidth
+  }
+  if('project' in options) {
+    this.axesProject = options.axesProject
+  }
+  if('axesBounds' in options) {
+    this.axesBounds = options.axesBounds
   }
 
   //Text font
@@ -452,27 +571,27 @@ function createPointCloud(gl, options) {
   options = options || {}
 
   var shader = createShader(gl)
-  shader.attributes.position.location = 0
-  shader.attributes.color.location = 1
-  shader.attributes.glyph.location = 2
-  shader.attributes.id.location = 3
-
   var orthoShader = createOrthoShader(gl)
-  orthoShader.attributes.position.location = 0
-  orthoShader.attributes.color.location = 1
-  orthoShader.attributes.glyph.location = 2
-  orthoShader.attributes.id.location = 3
-
+  var projectShader = createProjectShader(gl)
   var pickPerspectiveShader = createPickPerspectiveShader(gl)
-  pickPerspectiveShader.attributes.position.location = 0
-  pickPerspectiveShader.attributes.glyph.location = 2
-  pickPerspectiveShader.attributes.id.location = 3
-
   var pickOrthoShader = createPickOrthoShader(gl)
-  pickOrthoShader.attributes.position.location = 0
-  pickOrthoShader.attributes.glyph.location = 2
-  pickOrthoShader.attributes.id.location = 3
-  
+  var pickProjectShader = createPickProjectShader(gl)
+
+  var shaders = [shader, 
+                 orthoShader, 
+                 projectShader, 
+                 pickPerspectiveShader, 
+                 pickOrthoShader,
+                 pickProjectShader]
+
+  for(var i=0; i<shaders.length; ++i) {
+    var attr = shaders[i].attributes
+    attr.position.location = 0
+    attr.color.location = 1
+    attr.glyph.location = 2
+    attr.id.location = 3
+  }
+
   var pointBuffer = createBuffer(gl)
   var colorBuffer = createBuffer(gl)
   var glyphBuffer = createBuffer(gl)
@@ -504,14 +623,16 @@ function createPointCloud(gl, options) {
   var pointCloud = new PointCloud(
     gl, 
     shader, 
-    orthoShader, 
+    orthoShader,
+    projectShader,
     pointBuffer, 
     colorBuffer, 
     glyphBuffer, 
     idBuffer, 
     vao, 
     pickPerspectiveShader,
-    pickOrthoShader)
+    pickOrthoShader,
+    pickProjectShader)
 
   pointCloud.update(options)
 

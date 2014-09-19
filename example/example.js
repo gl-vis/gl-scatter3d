@@ -3,9 +3,10 @@ var camera = require("game-shell-orbit-camera")(shell)
 var createPoints = require("../pointcloud")
 var createAxes = require("gl-axes")
 var createSelect = require("gl-select")
+var createSpikes = require("gl-spikes")
 var mat4 = require("gl-matrix").mat4
  
-var points, axes, select, target=null
+var points, axes, select, spikes, target=null
 
 var SCALE = 1
 
@@ -18,7 +19,7 @@ shell.on("gl-init", function() {
   var gl = shell.gl
 
   var initialData = {
-    position: [ [1, 0, -1], [0, 1, -1], [0, 0, 1], [1,1,-1], [1,0,1], [0,1,1] ],
+    position: [ [0.9, 0, -0.8], [0, 0.6, -0.75], [0, 0, 0.4], [0.8,0.92,-0.4], [0.33,0,0.56], [0,0.11,0.8] ],
     glyph: [  "▼", "★", "■", "◆", "✚", "✖" ],
     color: [ [0,1,0], [0,0,1], [1,1,0], [1,0,1], [0,1,1], [0,0,0] ],
     size: 30,
@@ -40,10 +41,18 @@ shell.on("gl-init", function() {
 
   axes = createAxes(gl, {
     bounds: [[-SCALE,-SCALE, -SCALE], [SCALE, SCALE, SCALE]],
-    tickSpacing: [0.1*SCALE, 0.1*SCALE, 0.1*SCALE],
-    textSize: 0.1
+    tickSpacing: [0.25*SCALE, 0.25*SCALE, 0.25*SCALE],
+    textSize: 0.1,
+    tickPad: 0.2,
+    labelPad: 0.2,
+    gridColor: [0.5,0.5,0.5]
+
   })
 
+  spikes = createSpikes(gl, {
+    bounds: axes.bounds,
+    colors: [[1,0,0,1], [0,1,0,1], [0,0,1,1]]
+  })
   select = createSelect(gl, [shell.height, shell.width])
 })
 
@@ -65,8 +74,11 @@ function updatePick(cameraParams) {
   target = points.pick(selected)
   if(target) {
     points.highlight(target.index, [Math.random(),Math.random(),Math.random()])
+    spikes.position = target.position
+    spikes.enabled = [true,true,true]
   } else {
     points.highlight()
+    spikes.enabled = [false,false,false]
   }
 }
 
@@ -94,6 +106,10 @@ shell.on("gl-render", function() {
   updatePick(cameraParams)
 
   //Update camera
+  points.axesProject = [true,true,true]
+  points.axesBounds = axes.bounds
+  points.clipBounds = axes.bounds
   points.draw(cameraParams)
   axes.draw(cameraParams)
+  spikes.draw(cameraParams)
 })

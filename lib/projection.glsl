@@ -5,7 +5,9 @@ attribute vec4 color;
 attribute vec2 glyph;
 attribute vec4 id;
 
+uniform vec3 axes[2];
 uniform mat4 model, view, projection;
+uniform vec2 screenSize;
 uniform vec3 clipBounds[2];
 
 varying vec4 interpColor;
@@ -17,14 +19,13 @@ void main() {
      any(greaterThan(position, clipBounds[1])) ) {
     gl_Position = vec4(0,0,0,0);
   } else {
-    vec4 worldPosition = model * vec4(position, 1);
-    vec4 viewPosition = view * worldPosition;
-    viewPosition = viewPosition / viewPosition.w;
-    vec4 clipPosition = projection * (viewPosition + vec4(glyph.x, -glyph.y, 0, 0));
-    
+    vec4 clipCenter   = projection * view * model * vec4(position, 1);
+    vec3 dataPosition = position + 0.5*(axes[0] * glyph.x + axes[1] * glyph.y) * clipCenter.w * screenSize.y;
+    vec4 clipPosition = projection * view * model * vec4(dataPosition, 1);
+
     gl_Position = clipPosition;
     interpColor = color;
     pickId = id;
-    dataCoordinate = position;
+    dataCoordinate = dataPosition;
   }
 }

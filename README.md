@@ -142,6 +142,8 @@ Updates the scatter plot object.  The parameter `options` is an object with the 
 * `alignment` a 2d vector to offset text drawing by (default `[0,0]`)
 * `project` a flag (or array of flags) which determines which axes to project onto
 * `axisBounds` a pair of 3d arrays representing the bounds of the axes to project onto
+* `projectOpacity` the opacity of the projected point sprites (default `1.0`)
+* `projectScale` the scaling factor of the projected point sprites (default `2.0/3.0`)
 
 #### `points.draw(camera)`
 Draws the scatter plot with the given camera parameters.

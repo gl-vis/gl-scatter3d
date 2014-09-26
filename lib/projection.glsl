@@ -9,6 +9,7 @@ uniform vec3 axes[2];
 uniform mat4 model, view, projection;
 uniform vec2 screenSize;
 uniform vec3 clipBounds[2];
+uniform float scale;
 
 varying vec4 interpColor;
 varying vec4 pickId;
@@ -20,7 +21,7 @@ void main() {
     gl_Position = vec4(0,0,0,0);
   } else {
     vec4 clipCenter   = projection * view * model * vec4(position, 1);
-    vec3 dataPosition = position + 0.5*(axes[0] * glyph.x + axes[1] * glyph.y) * clipCenter.w * screenSize.y;
+    vec3 dataPosition = position + 0.5*scale*(axes[0] * glyph.x + axes[1] * glyph.y) * clipCenter.w * screenSize.y;
     vec4 clipPosition = projection * view * model * vec4(dataPosition, 1);
 
     gl_Position = clipPosition;

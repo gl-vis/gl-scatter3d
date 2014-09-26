@@ -90,6 +90,8 @@ function PointCloud(
   this.lineVertexCount = 0
 
   this.lineWidth       = 0
+  this.projectScale    = 2.0/3.0
+  this.projectOpacity  = 1.0
   
   this.pickId                = 0
   this.pickPerspectiveShader = pickPerspectiveShader
@@ -105,7 +107,6 @@ function PointCloud(
   this.axesProject = [ false, false, false ]
   this.axesBounds = [[-Infinity,-Infinity,-Infinity],
                      [ Infinity, Infinity, Infinity]]
-
 
   this.highlightColor = [0,0,0,1]
   this.highlightId    = [1,1,1,1]
@@ -139,6 +140,8 @@ function drawProject(shader, points, camera) {
   uniforms.highlightId    = points.highlightId
   uniforms.highlightColor = points.highlightColor
   uniforms.clipBounds     = clipBounds
+  uniforms.scale          = points.projectScale
+  uniforms.opacity        = points.projectOpacity
 
   for(var i=0; i<3; ++i) {
     if(!axesProject[i]) {
@@ -217,7 +220,8 @@ function drawFull(shader, pshader, points, camera) {
     highlightId:    points.highlightId,
     highlightColor: points.highlightColor,
     clipBounds:     points.clipBounds.map(clampVec),
-    fragClipBounds: [[-1e8,-1e8,-1e8],[1e8,1e8,1e8]]
+    fragClipBounds: [[-1e8,-1e8,-1e8],[1e8,1e8,1e8]],
+    opacity:        1
   }
 
   points.vao.bind()

@@ -304,7 +304,7 @@ proto.update = function(options) {
     this.lineWidth = options.lineWidth
   }
   if('project' in options) {
-    if(Array.isArray(options.project)) {
+    if(!Array.isArray(options.project)) {
       var v = !!options.project
       this.axesProject = [v,v,v]
     } else {

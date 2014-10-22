@@ -187,6 +187,14 @@ function drawProject(shader, points, camera) {
     if(mdv[1] > 0) {
       dv[v] = -1
     }
+    var su = 0.0
+    var sv = 0.0
+    for(var j=0; j<4; ++j) {
+      su += Math.pow(model[4*u+j], 2)
+      sv += Math.pow(model[4*v+j], 2)
+    }
+    du[u] /= Math.sqrt(su)
+    dv[v] /= Math.sqrt(sv) 
     uniforms.axes = [du, dv]
 
     //Update fragment clip bounds

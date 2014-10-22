@@ -54,13 +54,13 @@ shell.on("gl-init", function() {
     bounds: axes.bounds,
     colors: [[1,0,0,1], [0,1,0,1], [0,0,1,1]]
   })
-  select = createSelect(gl, [shell.height, shell.width])
+  select = createSelect(gl, [shell.width, shell.height])
 })
 
 
 function updatePick(cameraParams) {
   //Update size of select buffer
-  select.shape = [shell.height, shell.width]
+  select.shape = [shell.width, shell.height]
 
   //Begin pass, look for points within 30 pixels of mouse
   select.begin(shell.mouse[0], shell.mouse[1], 30)
@@ -96,7 +96,7 @@ shell.on("gl-render", function() {
         0.1,
         1000.0),
     model: [1/SCALE, 0, 0, 0,
-            0, 1/SCALE, 0, 0,
+            0, 3/SCALE, 0, 0,
             0, 0, 1/SCALE, 0,
             0, 0, 0, 1]
   }

@@ -314,6 +314,12 @@ proto.update = function(options) {
   if('axisBounds' in options) {
     this.axesBounds = options.axisBounds
   }
+  if('projectScale' in options) {
+    this.projectScale = options.projectScale
+  }
+  if('projectOpacity' in options) {
+    this.projectOpacity = options.projectOpacity
+  }
 
   //Text font
   var font      = options.font      || 'normal'

@@ -1,6 +1,7 @@
 precision mediump float;
 
 uniform vec3 fragClipBounds[2];
+uniform float pickGroup;
 
 varying vec4 pickId;
 varying vec3 dataCoordinate;
@@ -10,6 +11,6 @@ void main() {
      any(greaterThan(dataCoordinate, fragClipBounds[1])) ) {
     discard;
   } else {
-    gl_FragColor = pickId.abgr;
+    gl_FragColor = vec4(pickGroup, pickId.bgr);
   }
 }

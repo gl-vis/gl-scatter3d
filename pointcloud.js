@@ -2,38 +2,13 @@
 
 var createBuffer  = require('gl-buffer')
 var createVAO     = require('gl-vao')
-var glslify       = require('glslify')
 var pool          = require('typedarray-pool')
 var getCubeParams = require('gl-axes/lib/cube')
 var mat4          = require('gl-mat4')
 var vec4          = require('gl-matrix').vec4
 var vec3          = require('gl-matrix').vec3
+var shaders       = require('./lib/shaders')
 var getGlyph      = require('./lib/glyphs')
-
-var createShader = glslify({
-    vertex:   './lib/perspective.glsl',
-    fragment: './lib/draw-fragment.glsl'
-  }),
-  createOrthoShader = glslify({
-    vertex:   './lib/orthographic.glsl',
-    fragment: './lib/draw-fragment.glsl'
-  }),
-  createProjectShader = glslify({
-    vertex:   './lib/projection.glsl',
-    fragment: './lib/draw-fragment.glsl'
-  }),
-  createPickPerspectiveShader = glslify({
-    vertex:   './lib/perspective.glsl',
-    fragment: './lib/pick-fragment.glsl'
-  }),
-  createPickOrthoShader = glslify({
-    vertex:   './lib/orthographic.glsl',
-    fragment: './lib/pick-fragment.glsl'
-  }),
-  createPickProjectShader = glslify({
-    vertex:   './lib/projection.glsl',
-    fragment: './lib/pick-fragment.glsl'
-  })
 
 var IDENTITY = [1,0,0,0,
                 0,1,0,0,
@@ -58,7 +33,7 @@ function clampVec(v) {
 
 function ScatterPlotPickResult(index, position) {
   this.index = index
-  this.position = position
+  this.dataCoordinate = this.position = position
 }
 
 function PointCloud(
@@ -89,10 +64,12 @@ function PointCloud(
   this.vertexCount     = 0
   this.lineVertexCount = 0
 
+  this.opacity         = 1.0
+
   this.lineWidth       = 0
   this.projectScale    = 2.0/3.0
-  this.projectOpacity  = 1.0
-  
+  this.projectOpacity  = 0.1
+
   this.pickId                = 0
   this.pickPerspectiveShader = pickPerspectiveShader
   this.pickOrthoShader       = pickOrthoShader
@@ -104,22 +81,43 @@ function PointCloud(
                    [-Infinity,-Infinity,-Infinity]]
 
   //Axes projections
-  this.axesProject = [ false, false, false ]
+  this.axesProject = [ true, true, true ]
   this.axesBounds = [[-Infinity,-Infinity,-Infinity],
                      [ Infinity, Infinity, Infinity]]
 
-  this.highlightColor = [0,0,0,1]
   this.highlightId    = [1,1,1,1]
+  this.highlightScale = 2
 
   this.clipBounds = [[-Infinity,-Infinity,-Infinity], 
                      [ Infinity, Infinity, Infinity]]
+
+  this.dirty = true
 }
 
 var proto = PointCloud.prototype
 
-function drawProject(shader, points, camera) {
+proto.pickSlots = 1
+
+proto.setPickBase = function(pickBase) {
+  this.pickId = pickBase
+}
+
+proto.isTransparent = function() {
+  return this.opacity < 1 || (this.projectOpacity < 1 && 
+    (this.axesProject[0] || this.axesProject[1] || this.axesProject[2]))
+}
+
+proto.isOpaque = function() {
+  return this.opacity >= 1 || (this.projectOpacity >= 1 && 
+    (this.axesProject[0] || this.axesProject[1] || this.axesProject[2]))
+}
+
+function drawProject(shader, points, camera, transparent, forceDraw) {
   var axesProject = points.axesProject
   if(!(axesProject[0] || axesProject[1] || axesProject[2])) {
+    return
+  }
+  if(!(((points.projectOpacity < 1) === transparent) || forceDraw)) {
     return
   }
 
@@ -130,6 +128,7 @@ function drawProject(shader, points, camera) {
   var projection = camera.projection || IDENTITY
   var bounds     = points.axesBounds
   var clipBounds = points.clipBounds.map(clampVec)
+
   var cubeParams = getCubeParams(model, view, projection, bounds)
   var cubeAxis   = cubeParams.axis
 
@@ -138,10 +137,11 @@ function drawProject(shader, points, camera) {
   uniforms.projection     = projection
   uniforms.screenSize     = [2.0/gl.drawingBufferWidth, 2.0/gl.drawingBufferHeight]
   uniforms.highlightId    = points.highlightId
-  uniforms.highlightColor = points.highlightColor
+  uniforms.highlightScale = points.highlightScale
   uniforms.clipBounds     = clipBounds
   uniforms.scale          = points.projectScale
   uniforms.opacity        = points.projectOpacity
+  uniforms.pickGroup      = points.pickId / 255.0
 
   for(var i=0; i<3; ++i) {
     if(!axesProject[i]) {
@@ -215,47 +215,65 @@ function drawProject(shader, points, camera) {
 }
 
 
-function drawFull(shader, pshader, points, camera) {
+function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
+
+  var needsDrawForward = forceDraw || (transparent === (points.opacity < 1))
+  var needsDrawProject = forceDraw || ((transparent === (points.projectOpacity < 1)) && 
+                                       (points.axesProject[0] || points.axesProject[1] || points.axesProject[2]))
+
+  if(!(needsDrawProject || needsDrawForward)) {
+    return
+  }
+
   var gl = points.gl
   gl.depthFunc(gl.LEQUAL)
-
-  shader.bind()
-  shader.uniforms = {
-    model:          camera.model      || IDENTITY,
-    view:           camera.view       || IDENTITY,
-    projection:     camera.projection || IDENTITY,
-    screenSize:     [2.0/gl.drawingBufferWidth, 2.0/gl.drawingBufferHeight],
-    highlightId:    points.highlightId,
-    highlightColor: points.highlightColor,
-    clipBounds:     points.clipBounds.map(clampVec),
-    fragClipBounds: [[-1e8,-1e8,-1e8],[1e8,1e8,1e8]],
-    opacity:        1
-  }
+  gl.disable(gl.CULL_FACE)
 
   points.vao.bind()
 
-  //Draw interior
-  points.vao.draw(gl.TRIANGLES, points.vertexCount)
+  if(needsDrawForward) {
+    shader.bind()
+    shader.uniforms = {
+      model:          camera.model      || IDENTITY,
+      view:           camera.view       || IDENTITY,
+      projection:     camera.projection || IDENTITY,
+      screenSize:     [2.0/gl.drawingBufferWidth, 2.0/gl.drawingBufferHeight],
+      highlightId:    points.highlightId,
+      highlightScale: points.highlightScale,
+      clipBounds:     points.clipBounds.map(clampVec),
+      fragClipBounds: [[-1e8,-1e8,-1e8],[1e8,1e8,1e8]],
+      opacity:        points.opacity,
+      pickGroup:      points.pickId / 255.0
+    }
 
-  //Draw edges
-  if(points.lineWidth > 0) {
-    gl.lineWidth(points.lineWidth)
-    points.vao.draw(gl.LINES, points.lineVertexCount, points.vertexCount)
+    //Draw interior
+    points.vao.draw(gl.TRIANGLES, points.vertexCount)
+
+    //Draw edges
+    if(points.lineWidth > 0) {
+      gl.lineWidth(points.lineWidth)
+      points.vao.draw(gl.LINES, points.lineVertexCount, points.vertexCount)
+    }
   }
 
-  drawProject(pshader, points, camera)
+  drawProject(pshader, points, camera, transparent, forceDraw)
 
   points.vao.unbind()
 }
 
 proto.draw = function(camera) {
   var shader = this.useOrtho ? this.orthoShader : this.shader
-  drawFull(shader, this.projectShader, this, camera)
+  drawFull(shader, this.projectShader, this, camera, false, false)
+}
+
+proto.drawTransparent = function(camera) {
+  var shader = this.useOrtho ? this.orthoShader : this.shader
+  drawFull(shader, this.projectShader, this, camera, true, false) 
 }
 
 proto.drawPick = function(camera) {
   var shader = this.useOrtho ? this.pickOrthoShader : this.pickPerspectiveShader
-  drawFull(shader, this.pickProjectShader, this, camera)
+  drawFull(shader, this.pickProjectShader, this, camera, false, true)
 }
 
 proto.pick = function(selected) {
@@ -272,33 +290,19 @@ proto.pick = function(selected) {
   return new ScatterPlotPickResult(x, this.points[x].slice())
 }
 
-proto.highlight = function(pointId, color) {
-  if(typeof pointId !== "number") {
+proto.highlight = function(selection) {
+  if(!selection) {
     this.highlightId = [1,1,1,1]
-    this.highlightColor = [0,0,0,1]
   } else {
+    var pointId = selection.index
     var a0 =  pointId     &0xff
     var a1 = (pointId>>8) &0xff
     var a2 = (pointId>>16)&0xff
-    this.highlightId = [a0/255.0, a1/255.0, a2/255.0, this.pickId/255.0]
-    if(color) {
-      if(color.length === 3) {
-        this.highlightColor = [color[0], color[1], color[2], 1]
-      } else {
-        this.highlightColor = color
-      }
-    } else {
-      this.highlightColor = [0,0,0,1]
-    }
+    this.highlightId = [a0/255.0, a1/255.0, a2/255.0, 0]
   }
 }
 
 proto.update = function(options) {
-  //Create new buffers
-  var points = options.position
-  if(!points) {
-    throw new Error('gl-scatter-plot: Must specify points')
-  }
   if('orthographic' in options) {
     this.useOrtho = !!options.orthographic
   }
@@ -329,6 +333,15 @@ proto.update = function(options) {
     this.projectOpacity = options.projectOpacity
   }
 
+  //Set dirty flag
+  this.dirty = true
+
+  //Create new buffers
+  var points = options.position
+  if(!points) {
+    return
+  }
+
   //Text font
   var font      = options.font      || 'normal'
   var alignment = options.alignment || [0,0]
@@ -345,7 +358,7 @@ proto.update = function(options) {
   var lineColors = options.lineColor
 
   //Picking geometry
-  var pickCounter = (this.pickId << 24)
+  var pickCounter = 0
 
   //First do pass to compute buffer sizes
   var triVertexCount     = 0
@@ -593,27 +606,12 @@ proto.dispose = function() {
 function createPointCloud(gl, options) {
   options = options || {}
 
-  var shader = createShader(gl)
-  var orthoShader = createOrthoShader(gl)
-  var projectShader = createProjectShader(gl)
-  var pickPerspectiveShader = createPickPerspectiveShader(gl)
-  var pickOrthoShader = createPickOrthoShader(gl)
-  var pickProjectShader = createPickProjectShader(gl)
-
-  var shaders = [shader, 
-                 orthoShader, 
-                 projectShader, 
-                 pickPerspectiveShader, 
-                 pickOrthoShader,
-                 pickProjectShader]
-
-  for(var i=0; i<shaders.length; ++i) {
-    var attr = shaders[i].attributes
-    attr.position.location = 0
-    attr.color.location = 1
-    attr.glyph.location = 2
-    attr.id.location = 3
-  }
+  var shader                = shaders.createPerspective(gl)
+  var orthoShader           = shaders.createOrtho(gl)
+  var projectShader         = shaders.createProject(gl)
+  var pickPerspectiveShader = shaders.createPickPerspective(gl)
+  var pickOrthoShader       = shaders.createPickOrtho(gl)
+  var pickProjectShader     = shaders.createPickProject(gl)
 
   var pointBuffer = createBuffer(gl)
   var colorBuffer = createBuffer(gl)

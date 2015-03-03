@@ -1,7 +1,5 @@
 precision mediump float;
 
-uniform vec4 highlightId;
-uniform vec4 highlightColor;
 uniform vec3 fragClipBounds[2];
 uniform float opacity;
 
@@ -13,8 +11,6 @@ void main() {
   if(any(lessThan(dataCoordinate, fragClipBounds[0]))   || 
      any(greaterThan(dataCoordinate, fragClipBounds[1])) ) {
     discard;
-  } else if(distance(pickId, highlightId) < 0.001) {
-    gl_FragColor = highlightColor * opacity;
   } else {
     gl_FragColor = interpColor * opacity;
   }

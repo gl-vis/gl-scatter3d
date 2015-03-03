@@ -5,6 +5,9 @@ attribute vec4 color;
 attribute vec2 glyph;
 attribute vec4 id;
 
+
+uniform vec4 highlightId;
+uniform float highlightScale;
 uniform mat4 model, view, projection;
 uniform vec3 clipBounds[2];
 
@@ -17,10 +20,15 @@ void main() {
      any(greaterThan(position, clipBounds[1])) ) {
     gl_Position = vec4(0,0,0,0);
   } else {
+    float scale = 1.0;
+    if(distance(highlightId, id) < 0.0001) {
+      scale = highlightScale;
+    }
+
     vec4 worldPosition = model * vec4(position, 1);
     vec4 viewPosition = view * worldPosition;
     viewPosition = viewPosition / viewPosition.w;
-    vec4 clipPosition = projection * (viewPosition + vec4(glyph.x, -glyph.y, 0, 0));
+    vec4 clipPosition = projection * (viewPosition + scale * vec4(glyph.x, -glyph.y, 0, 0));
     
     gl_Position = clipPosition;
     interpColor = color;

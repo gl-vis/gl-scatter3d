@@ -19,6 +19,7 @@ shell.on("gl-init", function() {
   var gl = shell.gl
 
   var initialData = {
+    gl: gl,
     position: [ [0.9, 0, -0.8], [0, 0.6, -0.75], [0, 0, 0.4], [0.8,0.92,-0.4], [0.33,0,0.56], [0,0.11,0.8] ],
     glyph: [  "▼", "★", "■", "◆", "✚", "✖" ],
     color: [ [0,1,0], [0,0,1], [1,1,0], [1,0,1], [0,1,1], [0,0,0] ],
@@ -38,7 +39,7 @@ shell.on("gl-init", function() {
     initialData.color.push([1, 0, 0])
   }
 
-  points = createPoints(gl, initialData)
+  points = createPoints(initialData)
 
   axes = createAxes(gl, {
     bounds: [[-SCALE,-SCALE, -SCALE], [SCALE, SCALE, SCALE]],
@@ -49,6 +50,8 @@ shell.on("gl-init", function() {
     gridColor: [0.5,0.5,0.5]
 
   })
+
+  points.axes = axes
 
   spikes = createSpikes(gl, {
     bounds: axes.bounds,

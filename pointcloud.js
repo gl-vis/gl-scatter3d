@@ -3,7 +3,6 @@
 var createBuffer  = require('gl-buffer')
 var createVAO     = require('gl-vao')
 var pool          = require('typedarray-pool')
-var getCubeParams = require('gl-axes/lib/cube')
 var mat4          = require('gl-mat4')
 var vec4          = require('gl-matrix').vec4
 var vec3          = require('gl-matrix').vec3
@@ -68,13 +67,15 @@ function PointCloud(
 
   this.lineWidth       = 0
   this.projectScale    = 2.0/3.0
-  this.projectOpacity  = 0.1
+  this.projectOpacity  = 1
 
   this.pickId                = 0
   this.pickPerspectiveShader = pickPerspectiveShader
   this.pickOrthoShader       = pickOrthoShader
   this.pickProjectShader     = pickProjectShader
   this.points                = []
+
+  this._selectResult = new ScatterPlotPickResult(0, [0,0,0])
 
   this.useOrtho = false
   this.bounds   = [[ Infinity,Infinity,Infinity],
@@ -112,6 +113,46 @@ proto.isOpaque = function() {
     (this.axesProject[0] || this.axesProject[1] || this.axesProject[2]))
 }
 
+var VIEW_SHAPE = [0,0]
+var U_VEC = [0,0,0]
+var V_VEC = [0,0,0]
+var MU_VEC = [0,0,0,1]
+var MV_VEC = [0,0,0,1]
+var SCRATCH_MATRIX = IDENTITY.slice()
+var SCRATCH_VEC = [0,0,0]
+var CLIP_BOUNDS = [[0,0,0], [0,0,0]]
+
+function zeroVec(a) {
+  a[0] = a[1] = a[2] = 0
+  return a
+}
+
+function augment(hg, af) {
+  hg[0] = af[0]
+  hg[1] = af[1]
+  hg[2] = af[2]
+  hg[3] = 1
+  return hg
+}
+
+function setComponent(out, v, i, x) {
+  out[0] = v[0]
+  out[1] = v[1]
+  out[2] = v[2]
+  out[i] = x
+  return out
+}
+
+function getClipBounds(bounds) {
+  var result = CLIP_BOUNDS
+  for(var i=0; i<2; ++i) {
+    for(var j=0; j<3; ++j) {
+      result[i][j] = Math.max(Math.min(bounds[i][j], 1e8), -1e8)
+    }
+  }
+  return result
+}
+
 function drawProject(shader, points, camera, transparent, forceDraw) {
   var axesProject = points.axesProject
   if(!(axesProject[0] || axesProject[1] || axesProject[2])) {
@@ -127,15 +168,22 @@ function drawProject(shader, points, camera, transparent, forceDraw) {
   var view       = camera.view       || IDENTITY
   var projection = camera.projection || IDENTITY
   var bounds     = points.axesBounds
-  var clipBounds = points.clipBounds.map(clampVec)
+  var clipBounds = getClipBounds(points.clipBounds)
 
-  var cubeParams = getCubeParams(model, view, projection, bounds)
-  var cubeAxis   = cubeParams.axis
+  var cubeAxis
+  if(points.axes) {
+    cubeAxis = points.axes.lastCubeProps.axis
+  } else {
+    cubeAxis = [1,1,1]
+  }
+
+  VIEW_SHAPE[0] = 2.0/gl.drawingBufferWidth
+  VIEW_SHAPE[1] = 2.0/gl.drawingBufferHeight
 
   shader.bind()
   uniforms.view           = view
   uniforms.projection     = projection
-  uniforms.screenSize     = [2.0/gl.drawingBufferWidth, 2.0/gl.drawingBufferHeight]
+  uniforms.screenSize     = VIEW_SHAPE
   uniforms.highlightId    = points.highlightId
   uniforms.highlightScale = points.highlightScale
   uniforms.clipBounds     = clipBounds
@@ -149,7 +197,13 @@ function drawProject(shader, points, camera, transparent, forceDraw) {
     }
 
     //Project model matrix
-    var pmodel = IDENTITY.slice()
+    var pmodel = SCRATCH_MATRIX
+    for(var j=0; j<16; ++j) {
+      pmodel[j] = 0
+    }
+    for(var j=0; j<4; ++j) {
+      pmodel[5*j] = 1
+    }
     pmodel[5*i] = 0
     if(cubeAxis[i] < 0) {
       pmodel[12+i] = bounds[0][i]
@@ -162,14 +216,14 @@ function drawProject(shader, points, camera, transparent, forceDraw) {
     //Compute initial axes
     var u = (i+1)%3
     var v = (i+2)%3
-    var du = [0,0,0]
-    var dv = [0,0,0]
+    var du = zeroVec(U_VEC)
+    var dv = zeroVec(V_VEC)
     du[u] = 1
     dv[v] = 1
 
     //Align orientation relative to viewer
-    var mdu = project(projection, view, model, [du[0],du[1],du[2],0])
-    var mdv = project(projection, view, model, [dv[0],dv[1],dv[2],0])
+    var mdu = project(projection, view, model, augment(MU_VEC, du))
+    var mdv = project(projection, view, model, augment(MV_VEC, dv))
     if(Math.abs(mdu[1]) > Math.abs(mdv[1])) {
       var tmp = mdu
       mdu = mdv
@@ -195,13 +249,12 @@ function drawProject(shader, points, camera, transparent, forceDraw) {
     }
     du[u] /= Math.sqrt(su)
     dv[v] /= Math.sqrt(sv) 
-    uniforms.axes = [du, dv]
+    uniforms.axes[0] = du
+    uniforms.axes[1] = dv
 
     //Update fragment clip bounds
-    var fragClip = [clipBounds[0].slice(), clipBounds[1].slice()]
-    fragClip[0][i] = -1e8
-    fragClip[1][i] = 1e8
-    uniforms.fragClipBounds = fragClip
+    uniforms.fragClipBounds[0] = setComponent(SCRATCH_VEC, clipBounds[0], i, -1e8)
+    uniforms.fragClipBounds[1] = setComponent(SCRATCH_VEC, clipBounds[1], i, 1e8)
 
     //Draw interior
     points.vao.draw(gl.TRIANGLES, points.vertexCount)
@@ -214,6 +267,10 @@ function drawProject(shader, points, camera, transparent, forceDraw) {
   }
 }
 
+
+var NEG_INFINITY3 = [-1e8, -1e8, -1e8]
+var POS_INFINITY3 = [1e8, 1e8, 1e8]
+var CLIP_GROUP    = [NEG_INFINITY3, POS_INFINITY3]
 
 function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
 
@@ -233,18 +290,24 @@ function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
 
   if(needsDrawForward) {
     shader.bind()
-    shader.uniforms = {
-      model:          camera.model      || IDENTITY,
-      view:           camera.view       || IDENTITY,
-      projection:     camera.projection || IDENTITY,
-      screenSize:     [2.0/gl.drawingBufferWidth, 2.0/gl.drawingBufferHeight],
-      highlightId:    points.highlightId,
-      highlightScale: points.highlightScale,
-      clipBounds:     points.clipBounds.map(clampVec),
-      fragClipBounds: [[-1e8,-1e8,-1e8],[1e8,1e8,1e8]],
-      opacity:        points.opacity,
-      pickGroup:      points.pickId / 255.0
-    }
+    var uniforms = shader.uniforms
+
+    uniforms.model      = camera.model      || IDENTITY
+    uniforms.view       = camera.view       || IDENTITY
+    uniforms.projection = camera.projection || IDENTITY
+
+    VIEW_SHAPE[0]       = 2.0/gl.drawingBufferWidth
+    VIEW_SHAPE[1]       = 2.0/gl.drawingBufferHeight
+    uniforms.screenSize = VIEW_SHAPE
+
+    uniforms.highlightId    = points.highlightId
+    uniforms.highlightScale = points.highlightScale
+
+    uniforms.fragClipBounds = CLIP_GROUP
+    uniforms.clipBounds     = points.axes.bounds
+
+    uniforms.opacity    = points.opacity
+    uniforms.pickGroup  = points.pickId / 255.0
 
     //Draw interior
     points.vao.draw(gl.TRIANGLES, points.vertexCount)
@@ -287,7 +350,15 @@ proto.pick = function(selected) {
   if(x >= this.pointCount || x < 0) {
     return null
   }
-  return new ScatterPlotPickResult(x, this.points[x].slice())
+  
+  //Unpack result
+  var coord = this.points[x]
+  var result = this._selectResult
+  result.index = x
+  for(var i=0; i<3; ++i) {
+    result.position[i] = result.dataCoordinate[i] = coord[i]
+  }
+  return result
 }
 
 proto.highlight = function(selection) {
@@ -306,12 +377,6 @@ proto.update = function(options) {
   if('orthographic' in options) {
     this.useOrtho = !!options.orthographic
   }
-  if('pickId' in options) {
-    this.pickId = options.pickId>>>0
-  }
-  if('clipBounds' in options) {
-    this.clipBounds = options.clipBounds
-  }
   if('lineWidth' in options) {
     this.lineWidth = options.lineWidth
   }
@@ -322,9 +387,6 @@ proto.update = function(options) {
       var v = !!options.project
       this.axesProject = [v,v,v]
     }
-  }
-  if('axisBounds' in options) {
-    this.axesBounds = options.axisBounds
   }
   if('projectScale' in options) {
     this.projectScale = options.projectScale
@@ -603,8 +665,8 @@ proto.dispose = function() {
   this.idBuffer.dispose()
 }
 
-function createPointCloud(gl, options) {
-  options = options || {}
+function createPointCloud(options) {
+  var gl = options.gl
 
   var shader                = shaders.createPerspective(gl)
   var orthoShader           = shaders.createOrtho(gl)

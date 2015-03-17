@@ -32,7 +32,7 @@ for(var i=0; i<100; ++i) {
 
 var points = createPoints(initialData)
 
-scene.addObject(points)
+scene.add(points)
 ```
 
 # Install

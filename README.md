@@ -1,4 +1,4 @@
-gl-scatter-plot
+gl-scatter3d
 ===============
 3D WebGL scatter plots with custom point glyphs.
 
@@ -8,7 +8,7 @@ gl-scatter-plot
 
 ```javascript
 var createScene = require('gl-plot3d')
-var createPoints = require('gl-scatter-plot')
+var createPoints = require('gl-scatter3d')
 
 var scene = createScene()
 
@@ -38,32 +38,17 @@ scene.add(points)
 # Install
 
 ```
-npm install gl-scatter-plot
+npm install gl-scatter3d
 ```
 
-# API
+# Basic interface
 
-```javascript
-var createScatterPlot = require("gl-scatter-plot")
-```
+## Constructor
 
-## Interface
-
-### Constructor
-
-#### `var points = createScatterPlot(gl, options)`
-Constructs a scatter plot with the given parameters.  
+#### `var points = require('gl-scatter3d')(options)`
+Constructs a scatter plot with the given parameters.  `options` is an object with the following properties:
 
 * `gl` is a WebGL context
-* `options` is a JSON object containing configuration data for the scatter plot.  For more information, see the documentation in the `.update` method
-
-**Returns** A new scatter plot object
-
-### Update
-
-#### `points.update(options)`
-Updates the scatter plot object.  The parameter `options` is an object with the following properties:
-
 * `position` (Required) an array of length 3 arrays encoding the position of the points in the scatter plot.
 * `color` A length 3 array encoding the color of the points in the scatter plot.  To set colors per point, pass an array instead.  Default is `[0,0,0]`
 * `glyph` The glyph of each point.  This is a UTF8 string representing some shape.  Per point glyphs can be specified by passing an array.  The default glyph is a circle, `"●"`.  For more glyph ideas, check out the [unicode character set](http://unicode-table.com/en/).  Some other fun suggestions: `"☢", "☯", "❤", "▲", "⚑"`. 
@@ -77,6 +62,13 @@ Updates the scatter plot object.  The parameter `options` is an object with the 
 * `project` a flag (or array of flags) which determines which axes to project onto
 * `projectOpacity` the opacity of the projected point sprites (default `1.0`)
 * `projectScale` the scaling factor of the projected point sprites (default `2.0/3.0`)
+
+**Returns** A new scatter plot object
+
+## Update
+
+#### `points.update(options)`
+Updates the scatter plot object.  The parameter `options` has the same properties as the constructor.
 
 ### Properties
 
@@ -96,4 +88,4 @@ An array of projection values for each point
 The width of the outline of each point
 
 # Credits
-(c) 2014 Mikola Lysenko. MIT License.  Supported by [plot.ly](https://plot.ly/)
+(c) 2014-2015 Mikola Lysenko. MIT License.  Supported by [plot.ly](https://plot.ly/)

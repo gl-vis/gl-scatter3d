@@ -1,16 +1,14 @@
 {
-  "name": "gl-scatter-plot",
-  "version": "7.0.0",
+  "name": "gl-scatter3d",
+  "version": "1.0.0",
   "description": "3D scatter plot",
   "main": "pointcloud.js",
   "directories": {
     "example": "example"
   },
   "dependencies": {
-    "gl-axes": "^6.0.2",
     "gl-buffer": "^2.0.6",
     "gl-mat4": "^1.0.0",
-    "gl-matrix": "^2.1.0",
     "gl-shader": "^4.0.0",
     "gl-vao": "^1.1.2",
     "glslify": "^1.6.0",
@@ -32,7 +30,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/gl-vis/gl-scatter-plot.git"
+    "url": "git://github.com/gl-vis/gl-scatter3d.git"
   },
   "keywords": [
     "scatter",
@@ -45,9 +43,9 @@
   "author": "Mikola Lysenko",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/gl-vis/gl-scatter-plot/issues"
+    "url": "https://github.com/gl-vis/gl-scatter3d/issues"
   },
-  "homepage": "https://github.com/gl-vis/gl-scatter-plot",
+  "homepage": "https://github.com/gl-vis/gl-scatter3d",
   "browserify": {
     "transform": [
       "glslify"

@@ -3,9 +3,7 @@
 var createBuffer  = require('gl-buffer')
 var createVAO     = require('gl-vao')
 var pool          = require('typedarray-pool')
-var mat4          = require('gl-mat4')
-var vec4          = require('gl-matrix').vec4
-var vec3          = require('gl-matrix').vec3
+var mat4mult      = require('gl-mat4/multiply')
 var shaders       = require('./lib/shaders')
 var getGlyph      = require('./lib/glyphs')
 
@@ -16,10 +14,22 @@ var IDENTITY = [1,0,0,0,
 
 module.exports = createPointCloud
 
+function transformMat4(x, m) {
+  var x0 = x[0]
+  var x1 = x[1]
+  var x2 = x[2]
+  var x3 = x[3]
+  x[0] = m[0] * x0 + m[4] * x1 + m[8]  * x2 + m[12] * x3
+  x[1] = m[1] * x0 + m[5] * x1 + m[9]  * x2 + m[13] * x3
+  x[2] = m[2] * x0 + m[6] * x1 + m[10] * x2 + m[14] * x3
+  x[3] = m[3] * x0 + m[7] * x1 + m[11] * x2 + m[15] * x3
+  return x
+}
+
 function project(p, v, m, x) {
-  vec4.transformMat4(x, x, m)
-  vec4.transformMat4(x, x, v)
-  return vec4.transformMat4(x, x, p)
+  transformMat4(x, x, m)
+  transformMat4(x, x, v)
+  return transformMat4(x, x, p)
 }
 
 function clampVec(v) {
@@ -210,7 +220,7 @@ function drawProject(shader, points, camera, transparent, forceDraw) {
     } else {
       pmodel[12+i] = bounds[1][i]
     }
-    mat4.multiply(pmodel, model, pmodel)
+    mat4mult(pmodel, model, pmodel)
     uniforms.model = pmodel
 
     //Compute initial axes

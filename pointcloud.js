@@ -62,7 +62,7 @@ function PointCloud(
   this.gl              = gl
 
   this.pixelRatio      = 1
-
+  
   this.shader          = shader
   this.orthoShader     = orthoShader
   this.projectShader   = projectShader
@@ -89,7 +89,7 @@ function PointCloud(
 
   this._selectResult = new ScatterPlotPickResult(0, [0,0,0])
 
-  this.useOrtho = false
+  this.useOrtho = true
   this.bounds   = [[ Infinity,Infinity,Infinity],
                    [-Infinity,-Infinity,-Infinity]]
 
@@ -387,6 +387,12 @@ proto.highlight = function(selection) {
 }
 
 proto.update = function(options) {
+
+  options = options || {}
+  
+  if('perspective' in options) {
+    this.useOrtho = !options.perspective
+  }
   if('orthographic' in options) {
     this.useOrtho = !!options.orthographic
   }
@@ -406,6 +412,9 @@ proto.update = function(options) {
   }
   if('projectOpacity' in options) {
     this.projectOpacity = options.projectOpacity
+  }
+  if('opacity' in options) {
+    this.opacity = options.opacity
   }
 
   //Set dirty flag

@@ -11,7 +11,7 @@ uniform vec3 axes[2];
 uniform mat4 model, view, projection;
 uniform vec2 screenSize;
 uniform vec3 clipBounds[2];
-uniform float scale;
+uniform float scale, pixelRatio;
 
 varying vec4 interpColor;
 varying vec4 pickId;
@@ -22,7 +22,7 @@ void main() {
      any(greaterThan(position, clipBounds[1])) ) {
     gl_Position = vec4(0,0,0,0);
   } else {
-    float lscale = 1.0;
+    float lscale = pixelRatio;
     if(distance(highlightId, id) < 0.0001) {
       lscale *= highlightScale;
     }

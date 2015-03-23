@@ -8,7 +8,7 @@ attribute vec4 id;
 uniform mat4 model, view, projection;
 uniform vec2 screenSize;
 uniform vec3 clipBounds[2];
-uniform float highlightScale;
+uniform float highlightScale, pixelRatio;
 uniform vec4 highlightId;
 
 varying vec4 interpColor;
@@ -19,9 +19,9 @@ void main() {
   if(any(lessThan(position, clipBounds[0])) || any(greaterThan(position, clipBounds[1]))) {
     gl_Position = vec4(0,0,0,0);
   } else {
-    float scale = 1.0;
+    float scale = pixelRatio;
     if(distance(highlightId.bgr, id.bgr) < 0.001) {
-      scale = highlightScale;
+      scale *= highlightScale;
     }
 
     vec4 worldPosition = model * vec4(position, 1.0);

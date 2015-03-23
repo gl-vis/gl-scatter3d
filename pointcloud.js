@@ -61,6 +61,8 @@ function PointCloud(
 
   this.gl              = gl
 
+  this.pixelRatio      = 1
+
   this.shader          = shader
   this.orthoShader     = orthoShader
   this.projectShader   = projectShader
@@ -200,6 +202,7 @@ function drawProject(shader, points, camera, transparent, forceDraw) {
   uniforms.scale          = points.projectScale
   uniforms.opacity        = points.projectOpacity
   uniforms.pickGroup      = points.pickId / 255.0
+  uniforms.pixelRatio     = points.pixelRatio
 
   for(var i=0; i<3; ++i) {
     if(!axesProject[i]) {
@@ -293,9 +296,7 @@ function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
   }
 
   var gl = points.gl
-  gl.depthFunc(gl.LEQUAL)
-  gl.disable(gl.CULL_FACE)
-
+  
   points.vao.bind()
 
   if(needsDrawForward) {
@@ -318,6 +319,8 @@ function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
 
     uniforms.opacity    = points.opacity
     uniforms.pickGroup  = points.pickId / 255.0
+
+    uniforms.pixelRatio = points.pixelRatio
 
     //Draw interior
     points.vao.draw(gl.TRIANGLES, points.vertexCount)

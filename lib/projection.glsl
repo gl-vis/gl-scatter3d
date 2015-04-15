@@ -18,11 +18,11 @@ varying vec4 pickId;
 varying vec3 dataCoordinate;
 
 void main() {
-  if(any(lessThan(position, clipBounds[0]))   || 
+  if(any(lessThan(position, clipBounds[0]))   ||
      any(greaterThan(position, clipBounds[1])) ) {
     gl_Position = vec4(0,0,0,0);
   } else {
-    float lscale = pixelRatio;
+    float lscale = pixelRatio * scale;
     if(distance(highlightId, id) < 0.0001) {
       lscale *= highlightScale;
     }

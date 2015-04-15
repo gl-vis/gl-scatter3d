@@ -116,13 +116,27 @@ proto.setPickBase = function(pickBase) {
 }
 
 proto.isTransparent = function() {
-  return this.opacity < 1 || (this.projectOpacity < 1 &&
-    (this.axesProject[0] || this.axesProject[1] || this.axesProject[2]))
+  if(this.opacity < 1)  {
+    return true
+  }
+  for(var i=0; i<3; ++i) {
+    if(this.axesProject[i] && this.projectOpacity[i] < 1) {
+      return true
+    }
+  }
+  return false
 }
 
 proto.isOpaque = function() {
-  return this.opacity >= 1 || (this.projectOpacity >= 1 &&
-    (this.axesProject[0] || this.axesProject[1] || this.axesProject[2]))
+  if(this.opacity >= 1)  {
+    return true
+  }
+  for(var i=0; i<3; ++i) {
+    if(this.axesProject[i] && this.projectOpacity[i] >= 1) {
+      return true
+    }
+  }
+  return false
 }
 
 var VIEW_SHAPE = [0,0]
@@ -167,12 +181,6 @@ function getClipBounds(bounds) {
 
 function drawProject(shader, points, camera, transparent, forceDraw) {
   var axesProject = points.axesProject
-  if(!(axesProject[0] || axesProject[1] || axesProject[2])) {
-    return
-  }
-  if(!(((points.projectOpacity < 1) === transparent) || forceDraw)) {
-    return
-  }
 
   var gl         = points.gl
   var uniforms   = shader.uniforms
@@ -204,6 +212,9 @@ function drawProject(shader, points, camera, transparent, forceDraw) {
 
   for(var i=0; i<3; ++i) {
     if(!axesProject[i]) {
+      continue
+    }
+    if((points.projectOpacity[i] < 1) !== transparent) {
       continue
     }
 
@@ -287,20 +298,11 @@ var POS_INFINITY3 = [1e8, 1e8, 1e8]
 var CLIP_GROUP    = [NEG_INFINITY3, POS_INFINITY3]
 
 function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
-
-  var needsDrawForward = forceDraw || (transparent === (points.opacity < 1))
-  var needsDrawProject = forceDraw || ((transparent === (points.projectOpacity < 1)) &&
-                                       (points.axesProject[0] || points.axesProject[1] || points.axesProject[2]))
-
-  if(!(needsDrawProject || needsDrawForward)) {
-    return
-  }
-
   var gl = points.gl
 
   points.vao.bind()
 
-  if(needsDrawForward) {
+  if(transparent === (points.opacity < 1)) {
     shader.bind()
     var uniforms = shader.uniforms
 

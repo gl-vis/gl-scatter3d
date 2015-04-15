@@ -46,23 +46,23 @@ function ScatterPlotPickResult(index, position) {
 }
 
 function PointCloud(
-  gl, 
-  shader, 
-  orthoShader, 
+  gl,
+  shader,
+  orthoShader,
   projectShader,
-  pointBuffer, 
-  colorBuffer, 
+  pointBuffer,
+  colorBuffer,
   glyphBuffer,
   idBuffer,
-  vao, 
-  pickPerspectiveShader, 
+  vao,
+  pickPerspectiveShader,
   pickOrthoShader,
   pickProjectShader) {
 
   this.gl              = gl
 
   this.pixelRatio      = 1
-  
+
   this.shader          = shader
   this.orthoShader     = orthoShader
   this.projectShader   = projectShader
@@ -78,8 +78,8 @@ function PointCloud(
   this.opacity         = 1.0
 
   this.lineWidth       = 0
-  this.projectScale    = 2.0/3.0
-  this.projectOpacity  = 1
+  this.projectScale    = [2.0/3.0, 2.0/3.0, 2.0/3.0]
+  this.projectOpacity  = [1,1,1]
 
   this.pickId                = 0
   this.pickPerspectiveShader = pickPerspectiveShader
@@ -101,7 +101,7 @@ function PointCloud(
   this.highlightId    = [1,1,1,1]
   this.highlightScale = 2
 
-  this.clipBounds = [[-Infinity,-Infinity,-Infinity], 
+  this.clipBounds = [[-Infinity,-Infinity,-Infinity],
                      [ Infinity, Infinity, Infinity]]
 
   this.dirty = true
@@ -116,12 +116,12 @@ proto.setPickBase = function(pickBase) {
 }
 
 proto.isTransparent = function() {
-  return this.opacity < 1 || (this.projectOpacity < 1 && 
+  return this.opacity < 1 || (this.projectOpacity < 1 &&
     (this.axesProject[0] || this.axesProject[1] || this.axesProject[2]))
 }
 
 proto.isOpaque = function() {
-  return this.opacity >= 1 || (this.projectOpacity >= 1 && 
+  return this.opacity >= 1 || (this.projectOpacity >= 1 &&
     (this.axesProject[0] || this.axesProject[1] || this.axesProject[2]))
 }
 
@@ -199,8 +199,6 @@ function drawProject(shader, points, camera, transparent, forceDraw) {
   uniforms.highlightId    = points.highlightId
   uniforms.highlightScale = points.highlightScale
   uniforms.clipBounds     = clipBounds
-  uniforms.scale          = points.projectScale
-  uniforms.opacity        = points.projectOpacity
   uniforms.pickGroup      = points.pickId / 255.0
   uniforms.pixelRatio     = points.pixelRatio
 
@@ -208,6 +206,9 @@ function drawProject(shader, points, camera, transparent, forceDraw) {
     if(!axesProject[i]) {
       continue
     }
+
+    uniforms.scale          = points.projectScale[i]
+    uniforms.opacity        = points.projectOpacity[i]
 
     //Project model matrix
     var pmodel = SCRATCH_MATRIX
@@ -261,7 +262,7 @@ function drawProject(shader, points, camera, transparent, forceDraw) {
       sv += Math.pow(model[4*v+j], 2)
     }
     du[u] /= Math.sqrt(su)
-    dv[v] /= Math.sqrt(sv) 
+    dv[v] /= Math.sqrt(sv)
     uniforms.axes[0] = du
     uniforms.axes[1] = dv
 
@@ -288,7 +289,7 @@ var CLIP_GROUP    = [NEG_INFINITY3, POS_INFINITY3]
 function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
 
   var needsDrawForward = forceDraw || (transparent === (points.opacity < 1))
-  var needsDrawProject = forceDraw || ((transparent === (points.projectOpacity < 1)) && 
+  var needsDrawProject = forceDraw || ((transparent === (points.projectOpacity < 1)) &&
                                        (points.axesProject[0] || points.axesProject[1] || points.axesProject[2]))
 
   if(!(needsDrawProject || needsDrawForward)) {
@@ -296,7 +297,7 @@ function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
   }
 
   var gl = points.gl
-  
+
   points.vao.bind()
 
   if(needsDrawForward) {
@@ -344,7 +345,7 @@ proto.draw = function(camera) {
 
 proto.drawTransparent = function(camera) {
   var shader = this.useOrtho ? this.orthoShader : this.shader
-  drawFull(shader, this.projectShader, this, camera, true, false) 
+  drawFull(shader, this.projectShader, this, camera, true, false)
 }
 
 proto.drawPick = function(camera) {
@@ -363,7 +364,7 @@ proto.pick = function(selected) {
   if(x >= this.pointCount || x < 0) {
     return null
   }
-  
+
   //Unpack result
   var coord = this.points[x]
   var result = this._selectResult
@@ -389,7 +390,7 @@ proto.highlight = function(selection) {
 proto.update = function(options) {
 
   options = options || {}
-  
+
   if('perspective' in options) {
     this.useOrtho = !options.perspective
   }
@@ -401,17 +402,27 @@ proto.update = function(options) {
   }
   if('project' in options) {
     if(Array.isArray(options.project)) {
-      this.axesProject = options.project      
+      this.axesProject = options.project
     } else {
       var v = !!options.project
       this.axesProject = [v,v,v]
     }
   }
   if('projectScale' in options) {
-    this.projectScale = options.projectScale
+    if(Array.isArray(options.projectScale)) {
+      this.projectScale = options.projectScale.slice()
+    } else {
+      var s = +options.projectScale
+      this.projectScale = [s,s,s]
+    }
   }
   if('projectOpacity' in options) {
-    this.projectOpacity = options.projectOpacity
+    if(Array.isArray(options.projectOpacity)) {
+      this.projectOpacity = options.projectOpacity.slice()
+    } else {
+      var s = +options.projectOpacity
+      this.projectOpacity = [s,s,s]
+    }
   }
   if('opacity' in options) {
     this.opacity = options.opacity
@@ -433,7 +444,7 @@ proto.update = function(options) {
   //Bounds
   var lowerBound = [ Infinity, Infinity, Infinity]
   var upperBound = [-Infinity,-Infinity,-Infinity]
-  
+
   //Unpack options
   var glyphs     = options.glyph
   var colors     = options.color
@@ -504,7 +515,7 @@ fill_loop:
       }
 
       upperBound[j] = Math.max(upperBound[j], x[j])
-      lowerBound[j] = Math.min(lowerBound[j], x[j]) 
+      lowerBound[j] = Math.min(lowerBound[j], x[j])
     }
 
     var glyphData
@@ -589,7 +600,7 @@ fill_loop:
     var x = points[i]
     for(var j=0; j<3; ++j) {
       upperBound[j] = Math.max(upperBound[j], x[j])
-      lowerBound[j] = Math.min(lowerBound[j], x[j]) 
+      lowerBound[j] = Math.min(lowerBound[j], x[j])
     }
 
     //Calculate text offset
@@ -643,12 +654,12 @@ fill_loop:
     //Increment pickCounter
     pickCounter += 1
   }
-  
+
 
   //Update vertex counts
   this.vertexCount      = triVertexCount
   this.lineVertexCount  = lineVertexCount
-  
+
   //Update buffers
   this.pointBuffer.update(positionArray)
   this.colorBuffer.update(colorArray)
@@ -726,15 +737,15 @@ function createPointCloud(options) {
   ])
 
   var pointCloud = new PointCloud(
-    gl, 
-    shader, 
+    gl,
+    shader,
     orthoShader,
     projectShader,
-    pointBuffer, 
-    colorBuffer, 
-    glyphBuffer, 
-    idBuffer, 
-    vao, 
+    pointBuffer,
+    colorBuffer,
+    glyphBuffer,
+    idBuffer,
+    vao,
     pickPerspectiveShader,
     pickOrthoShader,
     pickProjectShader)

@@ -1,6 +1,6 @@
 {
   "name": "gl-scatter3d",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "3D scatter plot",
   "main": "pointcloud.js",
   "directories": {
@@ -14,8 +14,7 @@
     "typedarray-pool": "^1.0.2",
     "vectorize-text": "^3.0.0"
   },
-  "devDependencies": {
-  },
+  "devDependencies": {},
   "scripts": {
     "test": "beefy --open ./example/example.js"
   },

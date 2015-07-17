@@ -8,7 +8,7 @@ varying vec4 pickId;
 varying vec3 dataCoordinate;
 
 void main() {
-  if(any(lessThan(dataCoordinate, fragClipBounds[0]))   || 
+  if(any(lessThan(dataCoordinate, fragClipBounds[0]))   ||
      any(greaterThan(dataCoordinate, fragClipBounds[1])) ) {
     discard;
   } else {

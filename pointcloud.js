@@ -302,7 +302,7 @@ function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
 
   points.vao.bind()
 
-  if(transparent === (points.opacity < 1)) {
+  if(transparent === (points.opacity < 1) || forceDraw) {
     shader.bind()
     var uniforms = shader.uniforms
 

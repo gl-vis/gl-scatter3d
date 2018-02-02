@@ -191,7 +191,7 @@ function drawProject(shader, points, camera, transparent, forceDraw) {
   var clipBounds = getClipBounds(points.clipBounds)
 
   var cubeAxis
-  if(points.axes) {
+  if(points.axes && points.axes.lastCubeProps) {
     cubeAxis = points.axes.lastCubeProps.axis
   } else {
     cubeAxis = [1,1,1]

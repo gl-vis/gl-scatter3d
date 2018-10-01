@@ -15,8 +15,17 @@ varying vec4 interpColor;
 varying vec4 pickId;
 varying vec3 dataCoordinate;
 
+bool outOfRange(float a, float b, float p) {
+  if (p > max(a, b)) return true;
+  if (p < min(a, b)) return true;
+  return false;
+}
+
 void main() {
-  if(any(lessThan(position, clipBounds[0])) || any(greaterThan(position, clipBounds[1]))) {
+  if ((outOfRange(clipBounds[0].x, clipBounds[1].x, position.x)) ||
+      (outOfRange(clipBounds[0].y, clipBounds[1].y, position.y)) ||
+      (outOfRange(clipBounds[0].z, clipBounds[1].z, position.z))) {
+
     gl_Position = vec4(0,0,0,0);
   } else {
     float scale = pixelRatio;

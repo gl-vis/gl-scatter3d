@@ -14,9 +14,9 @@ bool outOfRange(float a, float b, float p) {
 }
 
 void main() {
-  if (outOfRange(fragClipBounds[0].x, fragClipBounds[1].x, dataCoordinate.x)) discard;
-  if (outOfRange(fragClipBounds[0].y, fragClipBounds[1].y, dataCoordinate.y)) discard;
-  if (outOfRange(fragClipBounds[0].z, fragClipBounds[1].z, dataCoordinate.z)) discard;
+  if ((outOfRange(fragClipBounds[0].x, fragClipBounds[1].x, dataCoordinate.x)) ||
+      (outOfRange(fragClipBounds[0].y, fragClipBounds[1].y, dataCoordinate.y)) ||
+      (outOfRange(fragClipBounds[0].z, fragClipBounds[1].z, dataCoordinate.z))) discard;
 
   gl_FragColor = interpColor * opacity;
 }

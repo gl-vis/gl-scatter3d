@@ -1,6 +1,6 @@
 precision mediump float;
 
-#pragma glslify: outOfRange = require(./reversed-scenes-out-of-range.glsl)
+#pragma glslify: outOfRange = require(glsl-out-of-range)
 
 attribute vec3 position;
 attribute vec4 color;
@@ -17,9 +17,7 @@ varying vec4 pickId;
 varying vec3 dataCoordinate;
 
 void main() {
-  if ((outOfRange(clipBounds[0].x, clipBounds[1].x, position.x)) ||
-      (outOfRange(clipBounds[0].y, clipBounds[1].y, position.y)) ||
-      (outOfRange(clipBounds[0].z, clipBounds[1].z, position.z))) {
+  if (outOfRange(clipBounds[0], clipBounds[1], position)) {
 
     gl_Position = vec4(0,0,0,0);
   } else {

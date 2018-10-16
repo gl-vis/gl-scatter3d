@@ -1,5 +1,7 @@
 precision mediump float;
 
+#pragma glslify: outOfRange = require(glsl-out-of-range)
+
 uniform vec3 fragClipBounds[2];
 uniform float pickGroup;
 
@@ -7,10 +9,7 @@ varying vec4 pickId;
 varying vec3 dataCoordinate;
 
 void main() {
-  if(any(lessThan(dataCoordinate, fragClipBounds[0]))   || 
-     any(greaterThan(dataCoordinate, fragClipBounds[1])) ) {
-    discard;
-  } else {
-    gl_FragColor = vec4(pickGroup, pickId.bgr);
-  }
+  if (outOfRange(fragClipBounds[0], fragClipBounds[1], dataCoordinate)) discard;
+
+  gl_FragColor = vec4(pickGroup, pickId.bgr);
 }

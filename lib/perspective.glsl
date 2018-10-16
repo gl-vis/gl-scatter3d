@@ -1,10 +1,11 @@
 precision mediump float;
 
+#pragma glslify: outOfRange = require(glsl-out-of-range)
+
 attribute vec3 position;
 attribute vec4 color;
 attribute vec2 glyph;
 attribute vec4 id;
-
 
 uniform vec4 highlightId;
 uniform float highlightScale;
@@ -16,8 +17,8 @@ varying vec4 pickId;
 varying vec3 dataCoordinate;
 
 void main() {
-  if(any(lessThan(position, clipBounds[0]))   || 
-     any(greaterThan(position, clipBounds[1])) ) {
+  if (outOfRange(clipBounds[0], clipBounds[1], position)) {
+
     gl_Position = vec4(0,0,0,0);
   } else {
     float scale = 1.0;
@@ -29,7 +30,7 @@ void main() {
     vec4 viewPosition = view * worldPosition;
     viewPosition = viewPosition / viewPosition.w;
     vec4 clipPosition = projection * (viewPosition + scale * vec4(glyph.x, -glyph.y, 0, 0));
-    
+
     gl_Position = clipPosition;
     interpColor = color;
     pickId = id;

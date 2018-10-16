@@ -1,5 +1,7 @@
 precision mediump float;
 
+#pragma glslify: outOfRange = require(glsl-out-of-range)
+
 attribute vec3 position;
 attribute vec4 color;
 attribute vec2 glyph;
@@ -18,8 +20,8 @@ varying vec4 pickId;
 varying vec3 dataCoordinate;
 
 void main() {
-  if(any(lessThan(position, clipBounds[0]))   ||
-     any(greaterThan(position, clipBounds[1])) ) {
+  if (outOfRange(clipBounds[0], clipBounds[1], position)) {
+
     gl_Position = vec4(0,0,0,0);
   } else {
     float lscale = pixelRatio * scale;

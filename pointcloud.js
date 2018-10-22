@@ -474,13 +474,18 @@ count_loop:
     }
 
     var glyphData
+    var input = ''
     if(Array.isArray(glyphs)) {
-      glyphData = getGlyph(glyphs[i], font)
+      input  = glyphs[i]
     } else if(glyphs) {
-      glyphData = getGlyph(glyphs, font)
-    } else {
-      glyphData = getGlyph('●', font)
+      input  = glyphs
     }
+    if((input === '') ||
+       (input.length === input.replace(/[^ ]/g, '').length)) { // check for all blank case
+      input = '●'
+    }
+    glyphData = getGlyph(input, font)
+
     var glyphMesh   = glyphData[0]
     var glyphLines  = glyphData[1]
     var glyphBounds = glyphData[2]

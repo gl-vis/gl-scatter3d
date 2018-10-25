@@ -389,7 +389,7 @@ proto.highlight = function(selection) {
   }
 }
 
-function get_glyphData(glyphs, index, font) {
+function get_glyphData(glyphs, index, font, fillBlank) {
   var str;
 
   // use the data if presented in an array
@@ -418,8 +418,13 @@ function get_glyphData(glyphs, index, font) {
   // now everything is string
 
   var visible = true;
-  if(str === '') {
-    str = '▼' // Note: it has minimum number of surfaces
+  if((str === '') ||
+     (str.length === str.replace(/[^ ]/g, '').length)) { // check for all blank cases
+
+    if(fillBlank) {
+      str = '▼' // Note: it has minimum number of surfaces
+    }
+    
     visible = false;
   }
 
@@ -518,7 +523,7 @@ proto.update = function(options) {
         }
       }
 
-      var glyphData = get_glyphData(glyphs, i, font)
+      var glyphData = get_glyphData(glyphs, i, font, true)
 
       var glyphMesh   = glyphData.mesh
       var glyphLines  = glyphData.lines
@@ -532,9 +537,6 @@ proto.update = function(options) {
       }
     }
   }
-
-  console.log("triVertexCount=", triVertexCount);
-  console.log("lineVertexCount=", lineVertexCount);
 
   //Preallocate data
   var vertexCount   = triVertexCount + lineVertexCount
@@ -569,7 +571,7 @@ proto.update = function(options) {
         lowerBound[j] = Math.min(lowerBound[j], x[j])
       }
 
-      var glyphData = get_glyphData(glyphs, i, font)
+      var glyphData = get_glyphData(glyphs, i, font, false)
 
       var glyphMesh   = glyphData.mesh
       var glyphLines  = glyphData.lines

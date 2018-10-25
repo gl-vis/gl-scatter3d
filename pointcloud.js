@@ -1,5 +1,6 @@
 'use strict'
 
+var isAllBlank    = require('is-string-blank')
 var createBuffer  = require('gl-buffer')
 var createVAO     = require('gl-vao')
 var pool          = require('typedarray-pool')
@@ -389,22 +390,6 @@ proto.highlight = function(selection) {
   }
 }
 
-// https://github.com/plotly/fast-isnumeric/blob/efdd602521132349539fcf32161f4f62f10ea741/index.js#L29-L42
-function allBlankCharCodes(str){
-    var l = str.length,
-        a;
-    for(var i = 0; i < l; i++) {
-        a = str.charCodeAt(i);
-        if((a < 9 || a > 13) && (a !== 32) && (a !== 133) && (a !== 160) &&
-            (a !== 5760) && (a !== 6158) && (a < 8192 || a > 8205) &&
-            (a !== 8232) && (a !== 8233) && (a !== 8239) && (a !== 8287) &&
-            (a !== 8288) && (a !== 12288) && (a !== 65279)) {
-                return false;
-        }
-    }
-    return true;
-}
-
 function get_glyphData(glyphs, index, font) {
   var str
 
@@ -434,7 +419,7 @@ function get_glyphData(glyphs, index, font) {
   // now everything is string
 
   var visible = true
-  if(allBlankCharCodes(str)) {
+  if(isAllBlank(str)) {
     str = '▼' // Note: this special character may have minimum number of surfaces
     visible = false
   }

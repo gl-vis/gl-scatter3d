@@ -638,7 +638,11 @@ proto.update = function(options) {
 
       var size = 0.5
       if(Array.isArray(sizes)) {
-        size = +sizes[i]
+        if(i < sizes.length) {
+          size = +sizes[i]
+        } else {
+          size = 12
+        }
       } else if(sizes) {
         size = +sizes
       } else if(this.useOrtho) {
@@ -647,7 +651,11 @@ proto.update = function(options) {
 
       var angle = 0
       if(Array.isArray(angles)) {
-        angle = +angles[i]
+        if(i < angles.length) {
+          angle = +angles[i]
+        } else {
+          angle = 0
+        }
       } else if(angles) {
         angle = +angles
       }

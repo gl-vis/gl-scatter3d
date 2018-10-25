@@ -389,8 +389,24 @@ proto.highlight = function(selection) {
   }
 }
 
-function get_glyphData(glyphs, index, font, fillBlank) {
-  var str;
+// https://github.com/plotly/fast-isnumeric/blob/efdd602521132349539fcf32161f4f62f10ea741/index.js#L29-L42
+function allBlankCharCodes(str){
+    var l = str.length,
+        a;
+    for(var i = 0; i < l; i++) {
+        a = str.charCodeAt(i);
+        if((a < 9 || a > 13) && (a !== 32) && (a !== 133) && (a !== 160) &&
+            (a !== 5760) && (a !== 6158) && (a < 8192 || a > 8205) &&
+            (a !== 8232) && (a !== 8233) && (a !== 8239) && (a !== 8287) &&
+            (a !== 8288) && (a !== 12288) && (a !== 65279)) {
+                return false;
+        }
+    }
+    return true;
+}
+
+function get_glyphData(glyphs, index, font) {
+  var str
 
   // use the data if presented in an array
   if(Array.isArray(glyphs)) {
@@ -417,15 +433,10 @@ function get_glyphData(glyphs, index, font, fillBlank) {
   }
   // now everything is string
 
-  var visible = true;
-  if((str === '') ||
-     (str.length === str.replace(/[^ ]/g, '').length)) { // check for all blank cases
-
-    if(fillBlank) {
-      str = '▼' // Note: it has minimum number of surfaces
-    }
-
-    visible = false;
+  var visible = true
+  if(allBlankCharCodes(str)) {
+    str = '▼' // Note: this special character may have minimum number of surfaces
+    visible = false
   }
 
   var glyph = getGlyph(str, font)
@@ -523,7 +534,7 @@ proto.update = function(options) {
         }
       }
 
-      var glyphData = get_glyphData(glyphs, i, font, true)
+      var glyphData = get_glyphData(glyphs, i, font)
 
       var glyphMesh   = glyphData.mesh
       var glyphLines  = glyphData.lines
@@ -572,8 +583,7 @@ proto.update = function(options) {
         lowerBound[j] = Math.min(lowerBound[j], x[j])
       }
 
-      //var glyphData = get_glyphData(glyphs, i, font, false)
-      var glyphData = get_glyphData(glyphs, i, font, true)
+      var glyphData = get_glyphData(glyphs, i, font)
 
       var glyphMesh   = glyphData.mesh
       var glyphLines  = glyphData.lines

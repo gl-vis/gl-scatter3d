@@ -417,7 +417,18 @@ function get_glyphData(glyphs, index, font) {
   }
   // now everything is string
 
-  return getGlyph(str, font)
+  var visible = true;
+  if(str === '') {
+    str = '▼' // Note: it has minimum number of surfaces
+    visible = false;
+  }
+
+  var glyph = getGlyph(str, font)
+
+  return { mesh:glyph[0],
+          lines:glyph[1],
+         bounds:glyph[2],
+        visible:visible };
 }
 
 
@@ -425,13 +436,6 @@ function get_glyphData(glyphs, index, font) {
 proto.update = function(options) {
 
   options = options || {}
-
-  //Create new buffers
-  var points = options.position
-  if(!points) {
-    return
-  }
-
 
   if('perspective' in options) {
     this.useOrtho = !options.perspective
@@ -473,6 +477,8 @@ proto.update = function(options) {
   //Set dirty flag
   this.dirty = true
 
+  //Create new buffers
+  var points = options.position
 
   //Text font
   var font      = options.font      || 'normal'
@@ -496,29 +502,34 @@ proto.update = function(options) {
   var triVertexCount  = 0
   var lineVertexCount = 0
 
-  //Count number of points and buffer size
-  var numPoints   = points.length || 0
+  var numPoints = 0;
 
-count_loop:
-  for(var i=0; i<numPoints; ++i) {
-    var x = points[i]
-    for(var j=0; j<3; ++j) {
-      if(isNaN(x[j]) || !isFinite(x[j])) {
-        continue count_loop
+  if(points.length) {
+
+    //Count number of points and buffer size
+    numPoints = points.length
+
+  count_loop:
+    for(var i=0; i<numPoints; ++i) {
+      var x = points[i]
+      for(var j=0; j<3; ++j) {
+        if(isNaN(x[j]) || !isFinite(x[j])) {
+          continue count_loop
+        }
       }
-    }
 
-    var glyphData = get_glyphData(glyphs, i, font)
+      var glyphData = get_glyphData(glyphs, i, font)
 
-    var glyphMesh   = glyphData[0]
-    var glyphLines  = glyphData[1]
-    var glyphBounds = glyphData[2]
+      var glyphMesh   = glyphData.mesh
+      var glyphLines  = glyphData.lines
+      var glyphBounds = glyphData.bounds
 
-    if(glyphMesh.cells.length && glyphMesh.cells.length > 0) {
-      triVertexCount  += glyphMesh.cells.length * 3
-    }
-    if(glyphLines.edges.length && glyphLines.edges.length > 0) {
-      lineVertexCount += glyphLines.edges.length * 2
+      if(glyphMesh.cells.length && glyphMesh.cells.length > 0) {
+        triVertexCount  += glyphMesh.cells.length * 3
+      }
+      if(glyphLines.edges.length && glyphLines.edges.length > 0) {
+        lineVertexCount += glyphLines.edges.length * 2
+      }
     }
   }
 
@@ -560,12 +571,14 @@ count_loop:
 
       var glyphData = get_glyphData(glyphs, i, font)
 
-      var glyphMesh   = glyphData[0]
-      var glyphLines  = glyphData[1]
-      var glyphBounds = glyphData[2]
+      var glyphMesh   = glyphData.mesh
+      var glyphLines  = glyphData.lines
+      var glyphBounds = glyphData.bounds
+      var glyphVisible = glyphData.visible
 
       //Get color
-      if(Array.isArray(colors)) {
+      if(!glyphVisible) color = [1,1,1,0]
+      else if(Array.isArray(colors)) {
         var c
         if(isColorArray) {
           if(i < colors.length) {
@@ -576,6 +589,7 @@ count_loop:
         } else {
           c = colors
         }
+
         if(c.length === 3) {
           for(var j=0; j<3; ++j) {
             color[j] = c[j]
@@ -591,8 +605,10 @@ count_loop:
         color[3] = 1
       }
 
+
       //Get lineColor
-      if(Array.isArray(lineColors)) {
+      if(!glyphVisible) lineColor = [1,1,1,0]
+      else if(Array.isArray(lineColors)) {
         var c
         if(isLineColorArray) {
           if(i < lineColors.length) {
@@ -603,6 +619,7 @@ count_loop:
         } else {
           c = lineColors
         }
+
         if(c.length === 3) {
           for(var j=0; j<3; ++j) {
             lineColor[j] = c[j]
@@ -617,6 +634,7 @@ count_loop:
         lineColor[0] = lineColor[1] = lineColor[2] = 0
         lineColor[3] = 1
       }
+
 
       var size = 0.5
       if(Array.isArray(sizes)) {

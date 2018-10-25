@@ -389,6 +389,47 @@ proto.highlight = function(selection) {
   }
 }
 
+function get_glyphData(glyphs, index, font, replaceWhenBlank) {
+  var str;
+  
+  // use the data if presented in an array
+  if(Array.isArray(glyphs)) {
+    if(index < glyphs.length) {
+      str = glyphs[index]
+    } else {
+      str = undefined
+    }    
+  } else {
+    str = glyphs
+  }  
+  
+  // handle undefined and object cases
+  if(str === undefined) {
+    //str = 'undefined' // this is for backward compatibility, I personally prefered to set this to N.A
+    str = ''
+  } else if(str === null) {
+    //str = 'null'
+    str = ''
+  } else if(typeof str === 'object') {
+    str = JSON.stringify(str, null, 1)
+  } else {
+    str = str.toString()
+  }
+  // now everything is string
+  
+  if(replaceWhenBlank) {  
+    if((str === '') ||
+       (str.length === str.replace(/[^ ]/g, '').length)) { // check for all blank case
+      str = '●'
+      //str = '▼' // note: a '▼' has minimal triangles when compared to a '●'
+    }
+  } 
+ 
+  return getGlyph(str, font)
+}
+
+
+
 proto.update = function(options) {
 
   options = options || {}
@@ -473,18 +514,7 @@ count_loop:
       }
     }
 
-    var glyphData
-    var input = ''
-    if(Array.isArray(glyphs)) {
-      input  = glyphs[i]
-    } else if(glyphs) {
-      input  = glyphs
-    }
-    if((input === '') ||
-       (input.length === input.replace(/[^ ]/g, '').length)) { // check for all blank case
-      input = '●'
-    }
-    glyphData = getGlyph(input, font)
+    var glyphData = get_glyphData(glyphs, i, font, true)
 
     var glyphMesh   = glyphData[0]
     var glyphLines  = glyphData[1]
@@ -525,19 +555,12 @@ fill_loop:
       lowerBound[j] = Math.min(lowerBound[j], x[j])
     }
 
-    var glyphData
-    if(Array.isArray(glyphs)) {
-      glyphData = getGlyph(glyphs[i], font)
-    } else if(glyphs) {
-      glyphData = getGlyph(glyphs, font)
-    } else {
-      glyphData = getGlyph('●', font)
-    }
+    var glyphData = get_glyphData(glyphs, i, font, false)
+
     var glyphMesh   = glyphData[0]
     var glyphLines  = glyphData[1]
     var glyphBounds = glyphData[2]
-
-
+    
     //Get color
     if(Array.isArray(colors)) {
       var c

@@ -424,7 +424,7 @@ function get_glyphData(glyphs, index, font, fillBlank) {
     if(fillBlank) {
       str = '▼' // Note: it has minimum number of surfaces
     }
-    
+
     visible = false;
   }
 
@@ -538,14 +538,15 @@ proto.update = function(options) {
     }
   }
 
-  //Preallocate data
   var vertexCount   = triVertexCount + lineVertexCount
-  if(vertexCount > 0) {
-    var positionArray = pool.mallocFloat(3*vertexCount)
-    var colorArray    = pool.mallocFloat(4*vertexCount)
-    var glyphArray    = pool.mallocFloat(2*vertexCount)
-    var idArray       = pool.mallocUint32(vertexCount)
 
+  //Preallocate data
+  var positionArray = pool.mallocFloat(3*vertexCount)
+  var colorArray    = pool.mallocFloat(4*vertexCount)
+  var glyphArray    = pool.mallocFloat(2*vertexCount)
+  var idArray       = pool.mallocUint32(vertexCount)
+
+  if(vertexCount > 0) {
     var textOffset = [0,alignment[1]]
 
     var triOffset  = 0
@@ -571,7 +572,8 @@ proto.update = function(options) {
         lowerBound[j] = Math.min(lowerBound[j], x[j])
       }
 
-      var glyphData = get_glyphData(glyphs, i, font, false)
+      //var glyphData = get_glyphData(glyphs, i, font, false)
+      var glyphData = get_glyphData(glyphs, i, font, true)
 
       var glyphMesh   = glyphData.mesh
       var glyphLines  = glyphData.lines
@@ -639,7 +641,8 @@ proto.update = function(options) {
 
 
       var size = 0.5
-      if(Array.isArray(sizes)) {
+      if(!glyphVisible) size = 0.0
+      else if(Array.isArray(sizes)) {
         if(i < sizes.length) {
           size = +sizes[i]
         } else {
@@ -650,6 +653,7 @@ proto.update = function(options) {
       } else if(this.useOrtho) {
         size = 12
       }
+
 
       var angle = 0
       if(Array.isArray(angles)) {
@@ -723,38 +727,9 @@ proto.update = function(options) {
     }
 
 
-    //Update vertex counts
-    this.vertexCount      = triVertexCount
-    this.lineVertexCount  = lineVertexCount
-
-    //Update buffers
-    //if(0 < positionArray.length) {
-      this.pointBuffer.update(positionArray)
-    //}
-    //if(0 < colorArray.length) {
-      this.colorBuffer.update(colorArray)
-    //}
-    //if(0 < glyphArray.length) {
-      this.glyphBuffer.update(glyphArray)
-    //}
-    //if(0 < idArray.length) {
-      this.idBuffer.update(new Uint32Array(idArray))
-    //}
-
-    //if(0 < positionArray.length) {
-      pool.free(positionArray)
-    //}
-    //if(0 < colorArray.length) {
-      pool.free(colorArray)
-    //}
-    //if(0 < glyphArray.length) {
-      pool.free(glyphArray)
-    //}
-    //if(0 < idArray.length) {
-      pool.free(idArray)
-    //}
 
   }
+
   //Update bounds
   this.bounds = [lowerBound, upperBound]
 
@@ -763,6 +738,21 @@ proto.update = function(options) {
 
   //Save number of points
   this.pointCount = points.length
+
+  //Update vertex counts
+  this.vertexCount      = triVertexCount
+  this.lineVertexCount  = lineVertexCount
+
+  this.pointBuffer.update(positionArray)
+  this.colorBuffer.update(colorArray)
+  this.glyphBuffer.update(glyphArray)
+  //this.idBuffer.update(new Uint32Array(idArray))
+  this.idBuffer.update(idArray)
+
+  pool.free(positionArray)
+  pool.free(colorArray)
+  pool.free(glyphArray)
+  pool.free(idArray)
 }
 
 proto.dispose = function() {

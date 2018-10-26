@@ -13,7 +13,7 @@
     "gl-vao": "^1.1.2",
     "glslify": "^6.1.0",
     "glsl-out-of-range": "^1.0.2",
-    "is-string-blank": "^1.0.0",
+    "is-string-blank": "^1.0.1",
     "typedarray-pool": "^1.0.2",
     "vectorize-text": "^3.0.0"
   },

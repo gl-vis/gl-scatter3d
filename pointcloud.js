@@ -514,12 +514,8 @@ proto.update = function(options) {
       var glyphLines  = glyphData.lines
       var glyphBounds = glyphData.bounds
 
-      if(glyphMesh.cells.length && glyphMesh.cells.length > 0) {
-        triVertexCount  += glyphMesh.cells.length * 3
-      }
-      if(glyphLines.edges.length && glyphLines.edges.length > 0) {
-        lineVertexCount += glyphLines.edges.length * 2
-      }
+      triVertexCount  += glyphMesh.cells.length * 3
+      lineVertexCount += glyphLines.edges.length * 2
     }
   }
 

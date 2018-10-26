@@ -1,12 +1,13 @@
 'use strict'
 
-var isAllBlank    = require('is-string-blank')
-var createBuffer  = require('gl-buffer')
-var createVAO     = require('gl-vao')
-var pool          = require('typedarray-pool')
-var mat4mult      = require('gl-mat4/multiply')
-var shaders       = require('./lib/shaders')
-var getGlyph      = require('./lib/glyphs')
+var isAllBlank      = require('is-string-blank')
+var createBuffer    = require('gl-buffer')
+var createVAO       = require('gl-vao')
+var pool            = require('typedarray-pool')
+var mat4mult        = require('gl-mat4/multiply')
+var shaders         = require('./lib/shaders')
+var getGlyph        = require('./lib/glyphs')
+var getSimpleString = require('./lib/get-simple-string')
 
 var IDENTITY = [1,0,0,0,
                 0,1,0,0,
@@ -404,19 +405,7 @@ function get_glyphData(glyphs, index, font) {
     str = glyphs
   }
 
-  // handle undefined and object cases
-  if(str === undefined) {
-    //str = 'undefined' // this line could be used for backward compatibility, I personally prefered to set this to N.A or null
-    str = ''
-  } else if(str === null) {
-    //str = 'null'
-    str = ''
-  } else if(typeof str === 'object') {
-    str = JSON.stringify(str, null, 1) // formatting object
-  } else {
-    str = str.toString()
-  }
-  // now everything is string
+  str = getSimpleString(str) // this would handle undefined cases
 
   var visible = true
   if(isAllBlank(str)) {

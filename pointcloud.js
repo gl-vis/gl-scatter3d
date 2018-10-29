@@ -1,11 +1,13 @@
 'use strict'
 
-var createBuffer  = require('gl-buffer')
-var createVAO     = require('gl-vao')
-var pool          = require('typedarray-pool')
-var mat4mult      = require('gl-mat4/multiply')
-var shaders       = require('./lib/shaders')
-var getGlyph      = require('./lib/glyphs')
+var isAllBlank      = require('is-string-blank')
+var createBuffer    = require('gl-buffer')
+var createVAO       = require('gl-vao')
+var pool            = require('typedarray-pool')
+var mat4mult        = require('gl-mat4/multiply')
+var shaders         = require('./lib/shaders')
+var getGlyph        = require('./lib/glyphs')
+var getSimpleString = require('./lib/get-simple-string')
 
 var IDENTITY = [1,0,0,0,
                 0,1,0,0,
@@ -389,6 +391,38 @@ proto.highlight = function(selection) {
   }
 }
 
+function get_glyphData(glyphs, index, font) {
+  var str
+
+  // use the data if presented in an array
+  if(Array.isArray(glyphs)) {
+    if(index < glyphs.length) {
+      str = glyphs[index]
+    } else {
+      str = undefined
+    }
+  } else {
+    str = glyphs
+  }
+
+  str = getSimpleString(str) // this would handle undefined cases
+
+  var visible = true
+  if(isAllBlank(str)) {
+    str = '▼' // Note: this special character may have minimum number of surfaces
+    visible = false
+  }
+
+  var glyph = getGlyph(str, font)
+
+  return { mesh:glyph[0],
+          lines:glyph[1],
+         bounds:glyph[2],
+        visible:visible };
+}
+
+
+
 proto.update = function(options) {
 
   options = options || {}
@@ -435,9 +469,6 @@ proto.update = function(options) {
 
   //Create new buffers
   var points = options.position
-  if(!points) {
-    return
-  }
 
   //Text font
   var font      = options.font      || 'normal'
@@ -455,223 +486,229 @@ proto.update = function(options) {
   var lineColors = options.lineColor
 
   //Picking geometry
-  var pickCounter = 0
+  var pickCounter = -1
 
   //First do pass to compute buffer sizes
-  var triVertexCount     = 0
+  var triVertexCount  = 0
   var lineVertexCount = 0
 
-  //Count number of points and buffer size
-  var numPoints   = points.length
+  var numPoints = 0;
 
-count_loop:
-  for(var i=0; i<numPoints; ++i) {
-    var x = points[i]
-    for(var j=0; j<3; ++j) {
-      if(isNaN(x[j]) || !isFinite(x[j])) {
-        continue count_loop
+  if(points.length) {
+
+    //Count number of points and buffer size
+    numPoints = points.length
+
+  count_loop:
+    for(var i=0; i<numPoints; ++i) {
+      var x = points[i]
+      for(var j=0; j<3; ++j) {
+        if(isNaN(x[j]) || !isFinite(x[j])) {
+          continue count_loop
+        }
       }
-    }
 
-    var glyphData
-    if(Array.isArray(glyphs)) {
-      glyphData = getGlyph(glyphs[i], font)
-    } else if(glyphs) {
-      glyphData = getGlyph(glyphs, font)
-    } else {
-      glyphData = getGlyph('●', font)
-    }
-    var glyphMesh   = glyphData[0]
-    var glyphLines  = glyphData[1]
-    var glyphBounds = glyphData[2]
+      var glyphData = get_glyphData(glyphs, i, font)
 
-    triVertexCount  += glyphMesh.cells.length * 3
-    lineVertexCount += glyphLines.edges.length * 2
+      var glyphMesh   = glyphData.mesh
+      var glyphLines  = glyphData.lines
+      var glyphBounds = glyphData.bounds
+
+      triVertexCount  += glyphMesh.cells.length * 3
+      lineVertexCount += glyphLines.edges.length * 2
+    }
   }
 
+  var vertexCount   = triVertexCount + lineVertexCount
 
   //Preallocate data
-  var vertexCount   = triVertexCount + lineVertexCount
   var positionArray = pool.mallocFloat(3*vertexCount)
   var colorArray    = pool.mallocFloat(4*vertexCount)
   var glyphArray    = pool.mallocFloat(2*vertexCount)
   var idArray       = pool.mallocUint32(vertexCount)
 
-  var textOffset = [0,alignment[1]]
+  if(vertexCount > 0) {
+    var textOffset = [0,alignment[1]]
 
-  var triOffset  = 0
-  var lineOffset = triVertexCount
-  var color      = [0,0,0,1]
-  var lineColor  = [0,0,0,1]
+    var triOffset  = 0
+    var lineOffset = triVertexCount
+    var color      = [0,0,0,1]
+    var lineColor  = [0,0,0,1]
 
-  var isColorArray      = Array.isArray(colors)     && Array.isArray(colors[0])
-  var isLineColorArray  = Array.isArray(lineColors) && Array.isArray(lineColors[0])
+    var isColorArray      = Array.isArray(colors)     && Array.isArray(colors[0])
+    var isLineColorArray  = Array.isArray(lineColors) && Array.isArray(lineColors[0])
 
-fill_loop:
-  for(var i=0; i<numPoints; ++i) {
-    var x = points[i]
-    for(var j=0; j<3; ++j) {
-      if(isNaN(x[j]) || !isFinite(x[j])) {
-        pickCounter += 1
-        continue fill_loop
-      }
+  fill_loop:
+    for(var i=0; i<numPoints; ++i) {
+      //Increment pickCounter
+      pickCounter += 1
 
-      upperBound[j] = Math.max(upperBound[j], x[j])
-      lowerBound[j] = Math.min(lowerBound[j], x[j])
-    }
-
-    var glyphData
-    if(Array.isArray(glyphs)) {
-      glyphData = getGlyph(glyphs[i], font)
-    } else if(glyphs) {
-      glyphData = getGlyph(glyphs, font)
-    } else {
-      glyphData = getGlyph('●', font)
-    }
-    var glyphMesh   = glyphData[0]
-    var glyphLines  = glyphData[1]
-    var glyphBounds = glyphData[2]
-
-
-    //Get color
-    if(Array.isArray(colors)) {
-      var c
-      if(isColorArray) {
-        c = colors[i]
-      } else {
-        c = colors
-      }
-      if(c.length === 3) {
-        for(var j=0; j<3; ++j) {
-          color[j] = c[j]
+      var x = points[i]
+      for(var j=0; j<3; ++j) {
+        if(isNaN(x[j]) || !isFinite(x[j])) {
+          continue fill_loop
         }
+
+        upperBound[j] = Math.max(upperBound[j], x[j])
+        lowerBound[j] = Math.min(lowerBound[j], x[j])
+      }
+
+      var glyphData = get_glyphData(glyphs, i, font)
+
+      var glyphMesh   = glyphData.mesh
+      var glyphLines  = glyphData.lines
+      var glyphBounds = glyphData.bounds
+      var glyphVisible = glyphData.visible
+
+      //Get color
+      if(!glyphVisible) color = [1,1,1,0]
+      else if(Array.isArray(colors)) {
+        var c
+        if(isColorArray) {
+          if(i < colors.length) {
+            c = colors[i]
+          } else {
+            c = [0,0,0,0]
+          }
+        } else {
+          c = colors
+        }
+
+        if(c.length === 3) {
+          for(var j=0; j<3; ++j) {
+            color[j] = c[j]
+          }
+          color[3] = 1
+        } else if(c.length === 4) {
+          for(var j=0; j<4; ++j) {
+            color[j] = c[j]
+          }
+        }
+      } else {
+        color[0] = color[1] = color[2] = 0
         color[3] = 1
-      } else if(c.length === 4) {
-        for(var j=0; j<4; ++j) {
-          color[j] = c[j]
-        }
       }
-    } else {
-      color[0] = color[1] = color[2] = 0
-      color[3] = 1
-    }
 
-    //Get lineColor
-    if(Array.isArray(lineColors)) {
-      var c
-      if(isLineColorArray) {
-        c = lineColors[i]
+
+      //Get lineColor
+      if(!glyphVisible) lineColor = [1,1,1,0]
+      else if(Array.isArray(lineColors)) {
+        var c
+        if(isLineColorArray) {
+          if(i < lineColors.length) {
+            c = lineColors[i]
+          } else {
+            c = [0,0,0,0]
+          }
+        } else {
+          c = lineColors
+        }
+
+        if(c.length === 3) {
+          for(var j=0; j<3; ++j) {
+            lineColor[j] = c[j]
+          }
+          lineColor[j] = 1
+        } else if(c.length === 4) {
+          for(var j=0; j<4; ++j) {
+            lineColor[j] = c[j]
+          }
+        }
       } else {
-        c = lineColors
+        lineColor[0] = lineColor[1] = lineColor[2] = 0
+        lineColor[3] = 1
       }
-      if(c.length === 3) {
-        for(var j=0; j<3; ++j) {
-          lineColor[j] = c[j]
+
+
+      var size = 0.5
+      if(!glyphVisible) size = 0.0
+      else if(Array.isArray(sizes)) {
+        if(i < sizes.length) {
+          size = +sizes[i]
+        } else {
+          size = 12
         }
-        lineColor[j] = 1
-      } else if(c.length === 4) {
-        for(var j=0; j<4; ++j) {
-          lineColor[j] = c[j]
+      } else if(sizes) {
+        size = +sizes
+      } else if(this.useOrtho) {
+        size = 12
+      }
+
+
+      var angle = 0
+      if(Array.isArray(angles)) {
+        if(i < angles.length) {
+          angle = +angles[i]
+        } else {
+          angle = 0
+        }
+      } else if(angles) {
+        angle = +angles
+      }
+
+      //Loop through markers and append to buffers
+      var cos = Math.cos(angle)
+      var sin = Math.sin(angle)
+
+      var x = points[i]
+      for(var j=0; j<3; ++j) {
+        upperBound[j] = Math.max(upperBound[j], x[j])
+        lowerBound[j] = Math.min(lowerBound[j], x[j])
+      }
+
+      //Calculate text offset
+      if(alignment[0] < 0) {
+        textOffset[0] = alignment[0]  * (1+glyphBounds[1][0])
+      } else if(alignment[0] > 0) {
+        textOffset[0] = -alignment[0] * (1+glyphBounds[0][0])
+      }
+
+      //Write out inner marker
+      var cells = glyphMesh.cells || []
+      var verts = glyphMesh.positions || []
+
+      for(var j=0; j<cells.length; ++j) {
+        var cell = cells[j]
+        for(var k=0; k<3; ++k) {
+          for(var l=0; l<3; ++l) {
+            positionArray[3*triOffset+l] = x[l]
+          }
+          for(var l=0; l<4; ++l) {
+            colorArray[4*triOffset+l] = color[l]
+          }
+          idArray[triOffset] = pickCounter
+          var p = verts[cell[k]]
+          glyphArray[2*triOffset]   = size * (cos*p[0] - sin*p[1] + textOffset[0])
+          glyphArray[2*triOffset+1] = size * (sin*p[0] + cos*p[1] + textOffset[1])
+          triOffset += 1
         }
       }
-    } else {
-      lineColor[0] = lineColor[1] = lineColor[2] = 0
-      lineColor[3] = 1
-    }
 
-    var size = 0.5
-    if(Array.isArray(sizes)) {
-      size = +sizes[i]
-    } else if(sizes) {
-      size = +sizes
-    } else if(this.useOrtho) {
-      size = 12
-    }
+      var cells = glyphLines.edges
+      var verts = glyphLines.positions
 
-    var angle = 0
-    if(Array.isArray(angles)) {
-      angle = +angles[i]
-    } else if(angles) {
-      angle = +angles
-    }
-
-    //Loop through markers and append to buffers
-    var cos = Math.cos(angle)
-    var sin = Math.sin(angle)
-
-    var x = points[i]
-    for(var j=0; j<3; ++j) {
-      upperBound[j] = Math.max(upperBound[j], x[j])
-      lowerBound[j] = Math.min(lowerBound[j], x[j])
-    }
-
-    //Calculate text offset
-    if(alignment[0] < 0) {
-      textOffset[0] = alignment[0]  * (1+glyphBounds[1][0])
-    } else if(alignment[0] > 0) {
-      textOffset[0] = -alignment[0] * (1+glyphBounds[0][0])
-    }
-
-    //Write out inner marker
-    var cells = glyphMesh.cells
-    var verts = glyphMesh.positions
-
-    for(var j=0; j<cells.length; ++j) {
-      var cell = cells[j]
-      for(var k=0; k<3; ++k) {
-        for(var l=0; l<3; ++l) {
-          positionArray[3*triOffset+l] = x[l]
+      for(var j=0; j<cells.length; ++j) {
+        var cell = cells[j]
+        for(var k=0; k<2; ++k) {
+          for(var l=0; l<3; ++l) {
+            positionArray[3*lineOffset+l] = x[l]
+          }
+          for(var l=0; l<4; ++l) {
+            colorArray[4*lineOffset+l] = lineColor[l]
+          }
+          idArray[lineOffset] = pickCounter
+          var p = verts[cell[k]]
+          glyphArray[2*lineOffset]   = size * (cos*p[0] - sin*p[1] + textOffset[0])
+          glyphArray[2*lineOffset+1] = size * (sin*p[0] + cos*p[1] + textOffset[1])
+          lineOffset += 1
         }
-        for(var l=0; l<4; ++l) {
-          colorArray[4*triOffset+l] = color[l]
-        }
-        idArray[triOffset] = pickCounter
-        var p = verts[cell[k]]
-        glyphArray[2*triOffset]   = size * (cos*p[0] - sin*p[1] + textOffset[0])
-        glyphArray[2*triOffset+1] = size * (sin*p[0] + cos*p[1] + textOffset[1])
-        triOffset += 1
       }
+
     }
 
-    var cells = glyphLines.edges
-    var verts = glyphLines.positions
 
-    for(var j=0; j<cells.length; ++j) {
-      var cell = cells[j]
-      for(var k=0; k<2; ++k) {
-        for(var l=0; l<3; ++l) {
-          positionArray[3*lineOffset+l] = x[l]
-        }
-        for(var l=0; l<4; ++l) {
-          colorArray[4*lineOffset+l] = lineColor[l]
-        }
-        idArray[lineOffset] = pickCounter
-        var p = verts[cell[k]]
-        glyphArray[2*lineOffset]   = size * (cos*p[0] - sin*p[1] + textOffset[0])
-        glyphArray[2*lineOffset+1] = size * (sin*p[0] + cos*p[1] + textOffset[1])
-        lineOffset += 1
-      }
-    }
 
-    //Increment pickCounter
-    pickCounter += 1
   }
-
-
-  //Update vertex counts
-  this.vertexCount      = triVertexCount
-  this.lineVertexCount  = lineVertexCount
-
-  //Update buffers
-  this.pointBuffer.update(positionArray)
-  this.colorBuffer.update(colorArray)
-  this.glyphBuffer.update(glyphArray)
-  this.idBuffer.update(new Uint32Array(idArray))
-
-  pool.free(positionArray)
-  pool.free(colorArray)
-  pool.free(glyphArray)
-  pool.free(idArray)
 
   //Update bounds
   this.bounds = [lowerBound, upperBound]
@@ -681,6 +718,21 @@ fill_loop:
 
   //Save number of points
   this.pointCount = points.length
+
+  //Update vertex counts
+  this.vertexCount      = triVertexCount
+  this.lineVertexCount  = lineVertexCount
+
+  this.pointBuffer.update(positionArray)
+  this.colorBuffer.update(colorArray)
+  this.glyphBuffer.update(glyphArray)
+  //this.idBuffer.update(new Uint32Array(idArray))
+  this.idBuffer.update(idArray)
+
+  pool.free(positionArray)
+  pool.free(colorArray)
+  pool.free(glyphArray)
+  pool.free(idArray)
 }
 
 proto.dispose = function() {

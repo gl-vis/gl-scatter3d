@@ -528,8 +528,6 @@ proto.update = function(options) {
   var idArray       = pool.mallocUint32(vertexCount)
 
   if(vertexCount > 0) {
-    var textOffset = [0,alignment[1]]
-
     var triOffset  = 0
     var lineOffset = triVertexCount
     var color      = [0,0,0,1]
@@ -657,10 +655,13 @@ proto.update = function(options) {
       }
 
       //Calculate text offset
-      if(alignment[0] < 0) {
-        textOffset[0] = alignment[0]  * (1+glyphBounds[1][0])
-      } else if(alignment[0] > 0) {
-        textOffset[0] = -alignment[0] * (1+glyphBounds[0][0])
+      var textOffset = [alignment[0], alignment[1]]
+      for(var j=0; j<2; ++j) {
+        if(alignment[j] > 0) {
+          textOffset[j] *= (1-glyphBounds[0][j])
+        } else if(alignment[j] < 0) {
+          textOffset[j] *= (1+glyphBounds[1][j])
+        }
       }
 
       //Write out inner marker

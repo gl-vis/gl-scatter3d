@@ -474,6 +474,20 @@ proto.update = function(options) {
   var font      = options.font      || 'normal'
   var alignment = options.alignment || [0,0]
 
+  var alignmentX;
+  var alignmentY;
+  if (alignment.length === 2) {
+    alignmentX = alignment[0]
+    alignmentY = alignment[1]
+  } else {
+    alignmentX = []
+    alignmentY = []
+    for (var i = 0; i < alignment.length; ++i) {
+      alignmentX[i] = alignment[i][0]
+      alignmentY[i] = alignment[i][1]
+    }
+  }
+
   //Bounds
   var lowerBound = [ Infinity, Infinity, Infinity]
   var upperBound = [-Infinity,-Infinity,-Infinity]
@@ -655,14 +669,38 @@ proto.update = function(options) {
       }
 
       //Calculate text offset
-      var textOffset = [alignment[0], alignment[1]]
-      for(var j=0; j<2; ++j) {
-        if(alignment[j] > 0) {
-          textOffset[j] *= (1-glyphBounds[0][j])
-        } else if(alignment[j] < 0) {
-          textOffset[j] *= (1+glyphBounds[1][j])
+      var textOffsetX = alignmentX
+      var textOffsetY = alignmentY
+
+      var textOffsetX = 0
+      if(Array.isArray(alignmentX)) {
+        if(i < alignmentX.length) {
+          textOffsetX = alignmentX[i]
+        } else {
+          alignmentX = 0
         }
+      } else if(alignmentX) {
+        textOffsetX = alignmentX
       }
+
+      var textOffsetY = 0
+      if(Array.isArray(alignmentY)) {
+        if(i < alignmentY.length) {
+          textOffsetY = alignmentY[i]
+        } else {
+          alignmentY = 0
+        }
+      } else if(alignmentY) {
+        textOffsetY = alignmentY
+      }
+
+      textOffsetX *= (textOffsetX > 0) ? (1 - glyphBounds[0][0]) :
+                     (textOffsetX < 0) ? (1 + glyphBounds[1][0]) : 1;
+
+      textOffsetY *= (textOffsetY > 0) ? (1 - glyphBounds[0][1]) :
+                     (textOffsetY < 0) ? (1 + glyphBounds[1][1]) : 1;
+
+      var textOffset = [textOffsetX, textOffsetY]
 
       //Write out inner marker
       var cells = glyphMesh.cells || []

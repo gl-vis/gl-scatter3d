@@ -677,7 +677,7 @@ proto.update = function(options) {
         if(i < alignmentX.length) {
           textOffsetX = alignmentX[i]
         } else {
-          alignmentX = 0
+          textOffsetX = 0
         }
       } else if(alignmentX) {
         textOffsetX = alignmentX
@@ -688,7 +688,7 @@ proto.update = function(options) {
         if(i < alignmentY.length) {
           textOffsetY = alignmentY[i]
         } else {
-          alignmentY = 0
+          textOffsetY = 0
         }
       } else if(alignmentY) {
         textOffsetY = alignmentY

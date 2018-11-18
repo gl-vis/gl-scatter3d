@@ -15,7 +15,7 @@
     "glsl-out-of-range": "^1.0.2",
     "is-string-blank": "^1.0.1",
     "typedarray-pool": "^1.0.2",
-    "vectorize-text": "git://github.com/archmoj/vectorize-text.git#7e13665e8e1b60edc53fce925acceed67d93e3f0"
+    "vectorize-text": "^3.2.0"
   },
   "devDependencies": {
     "game-shell-orbit-camera": "^1.0.0",

@@ -47,6 +47,8 @@ function ScatterPlotPickResult(index, position) {
   this.dataCoordinate = this.position = position
 }
 
+var MAX_OPACITY = 254 / 255.0 // Note: using 1.0 here triggers issue 3258 on Linux
+
 function PointCloud(
   gl,
   shader,
@@ -77,11 +79,11 @@ function PointCloud(
   this.vertexCount     = 0
   this.lineVertexCount = 0
 
-  this.opacity         = 254 / 255.0 // Note: using 1.0 here triggers issue 3258 on Linux
+  this.opacity         = MAX_OPACITY
 
   this.lineWidth       = 0
   this.projectScale    = [2.0/3.0, 2.0/3.0, 2.0/3.0]
-  this.projectOpacity  = [1,1,1]
+  this.projectOpacity  = [MAX_OPACITY, MAX_OPACITY, MAX_OPACITY]
 
   this.pickId                = 0
   this.pickPerspectiveShader = pickPerspectiveShader
@@ -461,7 +463,7 @@ proto.update = function(options) {
     }
   }
   if('opacity' in options) {
-    this.opacity = options.opacity
+    this.opacity = (options.opacity < MAX_OPACITY) ? options.opacity : MAX_OPACITY
   }
 
   //Set dirty flag

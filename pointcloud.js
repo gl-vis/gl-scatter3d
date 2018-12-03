@@ -47,7 +47,7 @@ function ScatterPlotPickResult(index, position) {
   this.dataCoordinate = this.position = position
 }
 
-var MAX_OPACITY = 254 / 255.0 // Note: using 1.0 here triggers issue 3258 on Linux
+var MAX_OPACITY = 1
 
 function PointCloud(
   gl,
@@ -120,11 +120,11 @@ proto.setPickBase = function(pickBase) {
 }
 
 proto.isTransparent = function() {
-  if(this.opacity < 1)  {
+  if(this.opacity < MAX_OPACITY)  {
     return true
   }
   for(var i=0; i<3; ++i) {
-    if(this.axesProject[i] && this.projectOpacity[i] < 1) {
+    if(this.axesProject[i] && this.projectOpacity[i] < MAX_OPACITY) {
       return true
     }
   }
@@ -132,11 +132,11 @@ proto.isTransparent = function() {
 }
 
 proto.isOpaque = function() {
-  if(this.opacity >= 1)  {
+  if(this.opacity >= MAX_OPACITY)  {
     return true
   }
   for(var i=0; i<3; ++i) {
-    if(this.axesProject[i] && this.projectOpacity[i] >= 1) {
+    if(this.axesProject[i] && this.projectOpacity[i] >= MAX_OPACITY) {
       return true
     }
   }
@@ -218,7 +218,7 @@ function drawProject(shader, points, camera, transparent, forceDraw) {
     if(!axesProject[i]) {
       continue
     }
-    if((points.projectOpacity[i] < 1) !== transparent) {
+    if((points.projectOpacity[i] < MAX_OPACITY) !== transparent) {
       continue
     }
 
@@ -304,9 +304,8 @@ var CLIP_GROUP    = [NEG_INFINITY3, POS_INFINITY3]
 function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
   var gl = points.gl
 
-  points.vao.bind()
+  if(transparent === (points.opacity < MAX_OPACITY) || forceDraw) {
 
-  if(transparent === (points.opacity < 1) || forceDraw) {
     shader.bind()
     var uniforms = shader.uniforms
 
@@ -329,6 +328,8 @@ function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
 
     uniforms.pixelRatio = points.pixelRatio
 
+    points.vao.bind()
+
     //Draw interior
     points.vao.draw(gl.TRIANGLES, points.vertexCount)
 
@@ -337,11 +338,11 @@ function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
       gl.lineWidth(points.lineWidth)
       points.vao.draw(gl.LINES, points.lineVertexCount, points.vertexCount)
     }
+
+    drawProject(pshader, points, camera, transparent, forceDraw)
+
+    points.vao.unbind()
   }
-
-  drawProject(pshader, points, camera, transparent, forceDraw)
-
-  points.vao.unbind()
 }
 
 proto.draw = function(camera) {
@@ -356,7 +357,7 @@ proto.drawTransparent = function(camera) {
 
 proto.drawPick = function(camera) {
   var shader = this.useOrtho ? this.pickOrthoShader : this.pickPerspectiveShader
-  drawFull(shader, this.pickProjectShader, this, camera, false, true)
+  drawFull(shader, this.pickProjectShader, this, camera, true, true)
 }
 
 proto.pick = function(selected) {
@@ -461,9 +462,13 @@ proto.update = function(options) {
       var s = +options.projectOpacity
       this.projectOpacity = [s,s,s]
     }
+    if(this.projectOpacity[0] > MAX_OPACITY) this.projectOpacity[0] = MAX_OPACITY
+    if(this.projectOpacity[1] > MAX_OPACITY) this.projectOpacity[1] = MAX_OPACITY
+    if(this.projectOpacity[2] > MAX_OPACITY) this.projectOpacity[2] = MAX_OPACITY
   }
   if('opacity' in options) {
-    this.opacity = (options.opacity < MAX_OPACITY) ? options.opacity : MAX_OPACITY
+    this.opacity = options.opacity
+    if(this.opacity > MAX_OPACITY) this.opacity = MAX_OPACITY
   }
 
   //Set dirty flag

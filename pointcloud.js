@@ -77,7 +77,7 @@ function PointCloud(
   this.vertexCount     = 0
   this.lineVertexCount = 0
 
-  this.opacity         = 1.0
+  this.opacity         = 254 / 255.0 // Note: using 1.0 here triggers issue 3258 on Linux
 
   this.lineWidth       = 0
   this.projectScale    = [2.0/3.0, 2.0/3.0, 2.0/3.0]

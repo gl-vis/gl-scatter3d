@@ -49,6 +49,12 @@ function ScatterPlotPickResult(index, position) {
 
 var MAX_OPACITY = 1
 
+function fixOpacity(a) {
+  if(a === true) return MAX_OPACITY
+  if(a > MAX_OPACITY) return MAX_OPACITY
+  return a
+}
+
 function PointCloud(
   gl,
   shader,
@@ -462,13 +468,12 @@ proto.update = function(options) {
       var s = +options.projectOpacity
       this.projectOpacity = [s,s,s]
     }
-    if(this.projectOpacity[0] > MAX_OPACITY) this.projectOpacity[0] = MAX_OPACITY
-    if(this.projectOpacity[1] > MAX_OPACITY) this.projectOpacity[1] = MAX_OPACITY
-    if(this.projectOpacity[2] > MAX_OPACITY) this.projectOpacity[2] = MAX_OPACITY
+    for(var i=0; i<3; ++i) {
+      this.projectOpacity[i] = fixOpacity(this.projectOpacity[i]);
+    }
   }
   if('opacity' in options) {
-    this.opacity = options.opacity
-    if(this.opacity > MAX_OPACITY) this.opacity = MAX_OPACITY
+    this.opacity = fixOpacity(options.opacity)
   }
 
   //Set dirty flag

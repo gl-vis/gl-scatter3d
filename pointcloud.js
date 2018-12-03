@@ -189,7 +189,7 @@ function getClipBounds(bounds) {
   return result
 }
 
-function drawProject(shader, points, camera, transparent, forceDraw) {
+function drawProject(shader, points, camera) {
   var axesProject = points.axesProject
 
   var gl         = points.gl
@@ -222,9 +222,6 @@ function drawProject(shader, points, camera, transparent, forceDraw) {
 
   for(var i=0; i<3; ++i) {
     if(!axesProject[i]) {
-      continue
-    }
-    if((points.projectOpacity[i] < MAX_OPACITY) !== transparent) {
       continue
     }
 
@@ -291,6 +288,8 @@ function drawProject(shader, points, camera, transparent, forceDraw) {
     uniforms.fragClipBounds[0] = setComponent(SCRATCH_VEC, clipBounds[0], i, -1e8)
     uniforms.fragClipBounds[1] = setComponent(SCRATCH_VEC, clipBounds[1], i, 1e8)
 
+    points.vao.bind()
+
     //Draw interior
     points.vao.draw(gl.TRIANGLES, points.vertexCount)
 
@@ -299,6 +298,8 @@ function drawProject(shader, points, camera, transparent, forceDraw) {
       gl.lineWidth(points.lineWidth)
       points.vao.draw(gl.LINES, points.lineVertexCount, points.vertexCount)
     }
+
+    points.vao.unbind()
   }
 }
 
@@ -309,6 +310,12 @@ var CLIP_GROUP    = [NEG_INFINITY3, POS_INFINITY3]
 
 function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
   var gl = points.gl
+
+
+
+  if(transparent === (points.projectOpacity < MAX_OPACITY) || forceDraw) {
+    drawProject(pshader, points, camera)
+  }
 
   if(transparent === (points.opacity < MAX_OPACITY) || forceDraw) {
 
@@ -345,10 +352,10 @@ function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
       points.vao.draw(gl.LINES, points.lineVertexCount, points.vertexCount)
     }
 
-    drawProject(pshader, points, camera, transparent, forceDraw)
-
     points.vao.unbind()
   }
+
+
 }
 
 proto.draw = function(camera) {

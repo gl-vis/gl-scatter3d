@@ -47,6 +47,14 @@ function ScatterPlotPickResult(index, position) {
   this.dataCoordinate = this.position = position
 }
 
+var MAX_OPACITY = 1
+
+function fixOpacity(a) {
+  if(a === true) return MAX_OPACITY
+  if(a > MAX_OPACITY) return MAX_OPACITY
+  return a
+}
+
 function PointCloud(
   gl,
   shader,
@@ -77,11 +85,11 @@ function PointCloud(
   this.vertexCount     = 0
   this.lineVertexCount = 0
 
-  this.opacity         = 1.0
+  this.opacity         = MAX_OPACITY
 
   this.lineWidth       = 0
   this.projectScale    = [2.0/3.0, 2.0/3.0, 2.0/3.0]
-  this.projectOpacity  = [1,1,1]
+  this.projectOpacity  = [MAX_OPACITY, MAX_OPACITY, MAX_OPACITY]
 
   this.pickId                = 0
   this.pickPerspectiveShader = pickPerspectiveShader
@@ -118,11 +126,11 @@ proto.setPickBase = function(pickBase) {
 }
 
 proto.isTransparent = function() {
-  if(this.opacity < 1)  {
+  if(this.opacity < MAX_OPACITY)  {
     return true
   }
   for(var i=0; i<3; ++i) {
-    if(this.axesProject[i] && this.projectOpacity[i] < 1) {
+    if(this.axesProject[i] && this.projectOpacity[i] < MAX_OPACITY) {
       return true
     }
   }
@@ -130,11 +138,11 @@ proto.isTransparent = function() {
 }
 
 proto.isOpaque = function() {
-  if(this.opacity >= 1)  {
+  if(this.opacity >= MAX_OPACITY)  {
     return true
   }
   for(var i=0; i<3; ++i) {
-    if(this.axesProject[i] && this.projectOpacity[i] >= 1) {
+    if(this.axesProject[i] && this.projectOpacity[i] >= MAX_OPACITY) {
       return true
     }
   }
@@ -181,7 +189,7 @@ function getClipBounds(bounds) {
   return result
 }
 
-function drawProject(shader, points, camera, transparent, forceDraw) {
+function drawProject(shader, points, camera) {
   var axesProject = points.axesProject
 
   var gl         = points.gl
@@ -214,9 +222,6 @@ function drawProject(shader, points, camera, transparent, forceDraw) {
 
   for(var i=0; i<3; ++i) {
     if(!axesProject[i]) {
-      continue
-    }
-    if((points.projectOpacity[i] < 1) !== transparent) {
       continue
     }
 
@@ -283,6 +288,8 @@ function drawProject(shader, points, camera, transparent, forceDraw) {
     uniforms.fragClipBounds[0] = setComponent(SCRATCH_VEC, clipBounds[0], i, -1e8)
     uniforms.fragClipBounds[1] = setComponent(SCRATCH_VEC, clipBounds[1], i, 1e8)
 
+    points.vao.bind()
+
     //Draw interior
     points.vao.draw(gl.TRIANGLES, points.vertexCount)
 
@@ -291,6 +298,8 @@ function drawProject(shader, points, camera, transparent, forceDraw) {
       gl.lineWidth(points.lineWidth)
       points.vao.draw(gl.LINES, points.lineVertexCount, points.vertexCount)
     }
+
+    points.vao.unbind()
   }
 }
 
@@ -302,9 +311,14 @@ var CLIP_GROUP    = [NEG_INFINITY3, POS_INFINITY3]
 function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
   var gl = points.gl
 
-  points.vao.bind()
 
-  if(transparent === (points.opacity < 1) || forceDraw) {
+
+  if(transparent === (points.projectOpacity < MAX_OPACITY) || forceDraw) {
+    drawProject(pshader, points, camera)
+  }
+
+  if(transparent === (points.opacity < MAX_OPACITY) || forceDraw) {
+
     shader.bind()
     var uniforms = shader.uniforms
 
@@ -327,6 +341,8 @@ function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
 
     uniforms.pixelRatio = points.pixelRatio
 
+    points.vao.bind()
+
     //Draw interior
     points.vao.draw(gl.TRIANGLES, points.vertexCount)
 
@@ -335,11 +351,11 @@ function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
       gl.lineWidth(points.lineWidth)
       points.vao.draw(gl.LINES, points.lineVertexCount, points.vertexCount)
     }
+
+    points.vao.unbind()
   }
 
-  drawProject(pshader, points, camera, transparent, forceDraw)
 
-  points.vao.unbind()
 }
 
 proto.draw = function(camera) {
@@ -354,7 +370,7 @@ proto.drawTransparent = function(camera) {
 
 proto.drawPick = function(camera) {
   var shader = this.useOrtho ? this.pickOrthoShader : this.pickPerspectiveShader
-  drawFull(shader, this.pickProjectShader, this, camera, false, true)
+  drawFull(shader, this.pickProjectShader, this, camera, true, true)
 }
 
 proto.pick = function(selected) {
@@ -459,9 +475,12 @@ proto.update = function(options) {
       var s = +options.projectOpacity
       this.projectOpacity = [s,s,s]
     }
+    for(var i=0; i<3; ++i) {
+      this.projectOpacity[i] = fixOpacity(this.projectOpacity[i]);
+    }
   }
   if('opacity' in options) {
-    this.opacity = options.opacity
+    this.opacity = fixOpacity(options.opacity)
   }
 
   //Set dirty flag

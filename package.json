@@ -12,7 +12,7 @@
     "gl-shader": "^4.2.0",
     "gl-vao": "^1.1.2",
     "glsl-out-of-range": "^1.0.4",
-    "glslify": "^6.4.1",
+    "glslify": "^7.0.0",
     "is-string-blank": "^1.0.1",
     "typedarray-pool": "^1.0.2",
     "vectorize-text": "^3.2.0"

@@ -34,14 +34,6 @@ function project(p, v, m, x) {
   return transformMat4(x, x, p)
 }
 
-function clampVec(v) {
-  var result = new Array(3)
-  for(var i=0; i<3; ++i) {
-    result[i] = Math.min(Math.max(v[i], -1e8), 1e8)
-  }
-  return result
-}
-
 function ScatterPlotPickResult(index, position) {
   this.index = index
   this.dataCoordinate = this.position = position

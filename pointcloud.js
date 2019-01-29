@@ -39,11 +39,9 @@ function ScatterPlotPickResult(index, position) {
   this.dataCoordinate = this.position = position
 }
 
-var MAX_OPACITY = 1
-
 function fixOpacity(a) {
-  if(a === true) return MAX_OPACITY
-  if(a > MAX_OPACITY) return MAX_OPACITY
+  if(a === true) return 1
+  if(a > 1) return 1
   return a
 }
 
@@ -77,11 +75,11 @@ function PointCloud(
   this.vertexCount     = 0
   this.lineVertexCount = 0
 
-  this.opacity         = MAX_OPACITY
+  this.opacity         = 1
 
   this.lineWidth       = 0
   this.projectScale    = [2.0/3.0, 2.0/3.0, 2.0/3.0]
-  this.projectOpacity  = [MAX_OPACITY, MAX_OPACITY, MAX_OPACITY]
+  this.projectOpacity  = [1, 1, 1]
 
   this.pickId                = 0
   this.pickPerspectiveShader = pickPerspectiveShader
@@ -118,11 +116,11 @@ proto.setPickBase = function(pickBase) {
 }
 
 proto.isTransparent = function() {
-  if(this.opacity < MAX_OPACITY)  {
+  if(this.opacity < 1)  {
     return true
   }
   for(var i=0; i<3; ++i) {
-    if(this.axesProject[i] && this.projectOpacity[i] < MAX_OPACITY) {
+    if(this.axesProject[i] && this.projectOpacity[i] < 1) {
       return true
     }
   }
@@ -130,11 +128,11 @@ proto.isTransparent = function() {
 }
 
 proto.isOpaque = function() {
-  if(this.opacity >= MAX_OPACITY)  {
+  if(this.opacity >= 1)  {
     return true
   }
   for(var i=0; i<3; ++i) {
-    if(this.axesProject[i] && this.projectOpacity[i] >= MAX_OPACITY) {
+    if(this.axesProject[i] && this.projectOpacity[i] >= 1) {
       return true
     }
   }
@@ -305,11 +303,11 @@ function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
 
 
 
-  if(transparent === (points.projectOpacity < MAX_OPACITY) || forceDraw) {
+  if(transparent === (points.projectOpacity < 1) || forceDraw) {
     drawProject(pshader, points, camera)
   }
 
-  if(transparent === (points.opacity < MAX_OPACITY) || forceDraw) {
+  if(transparent === (points.opacity < 1) || forceDraw) {
 
     shader.bind()
     var uniforms = shader.uniforms
@@ -561,6 +559,8 @@ proto.update = function(options) {
     var isColorArray      = Array.isArray(colors)     && Array.isArray(colors[0])
     var isLineColorArray  = Array.isArray(lineColors) && Array.isArray(lineColors[0])
 
+  var preOpacity = this.opacity
+
   fill_loop:
     for(var i=0; i<numPoints; ++i) {
       //Increment pickCounter
@@ -606,6 +606,7 @@ proto.update = function(options) {
           for(var j=0; j<4; ++j) {
             color[j] = c[j]
           }
+          if(this.opacity === 1 && c[3] < 1) this.opacity = 0.999
         }
       } else {
         color[0] = color[1] = color[2] = 0
@@ -636,6 +637,7 @@ proto.update = function(options) {
           for(var j=0; j<4; ++j) {
             lineColor[j] = c[j]
           }
+          if(this.opacity === 1 && c[3] < 1) this.opacity = 0.999
         }
       } else {
         lineColor[0] = lineColor[1] = lineColor[2] = 0

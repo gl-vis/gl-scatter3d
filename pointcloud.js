@@ -458,6 +458,8 @@ proto.update = function(options) {
       this.projectScale = [s,s,s]
     }
   }
+
+  this.projectHasAlpha = [false, false, false] // default to no transparent draws
   if('projectOpacity' in options) {
     if(Array.isArray(options.projectOpacity)) {
       this.projectOpacity = options.projectOpacity.slice()
@@ -474,6 +476,8 @@ proto.update = function(options) {
       }
     }
   }
+
+  this.hasAlpha = false // default to no transparent draw
   if('opacity' in options) {
     this.opacity = fixOpacity(options.opacity)
     if(this.opacity < 1) {

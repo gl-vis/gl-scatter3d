@@ -81,7 +81,7 @@ function PointCloud(
   this.lineWidth       = 0
   this.projectScale    = [2.0/3.0, 2.0/3.0, 2.0/3.0]
   this.projectOpacity  = [1, 1, 1]
-  this.projectHasAlpha  = [false, false, false]
+  this.projectHasAlpha  = false
 
   this.pickId                = 0
   this.pickPerspectiveShader = pickPerspectiveShader
@@ -122,7 +122,7 @@ proto.isTransparent = function() {
     return true
   }
   for(var i=0; i<3; ++i) {
-    if(this.axesProject[i] && this.projectHasAlpha[i]) {
+    if(this.axesProject[i] && this.projectHasAlpha) {
       return true
     }
   }
@@ -134,7 +134,7 @@ proto.isOpaque = function() {
     return true
   }
   for(var i=0; i<3; ++i) {
-    if(this.axesProject[i] && !this.projectHasAlpha[i]) {
+    if(this.axesProject[i] && !this.projectHasAlpha) {
       return true
     }
   }
@@ -459,7 +459,7 @@ proto.update = function(options) {
     }
   }
 
-  this.projectHasAlpha = [false, false, false] // default to no transparent draws
+  this.projectHasAlpha = false // default to no transparent draw
   if('projectOpacity' in options) {
     if(Array.isArray(options.projectOpacity)) {
       this.projectOpacity = options.projectOpacity.slice()
@@ -470,9 +470,7 @@ proto.update = function(options) {
     for(var i=0; i<3; ++i) {
       this.projectOpacity[i] = fixOpacity(this.projectOpacity[i]);
       if(this.projectOpacity[i] < 1) {
-        this.projectHasAlpha[i] = true;
-      } else {
-        this.projectHasAlpha[i] = false;
+        this.projectHasAlpha = true;
       }
     }
   }
@@ -482,8 +480,6 @@ proto.update = function(options) {
     this.opacity = fixOpacity(options.opacity)
     if(this.opacity < 1) {
       this.hasAlpha = true;
-    } else {
-      this.hasAlpha = false;
     }
   }
 

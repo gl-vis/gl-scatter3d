@@ -34,24 +34,14 @@ function project(p, v, m, x) {
   return transformMat4(x, x, p)
 }
 
-function clampVec(v) {
-  var result = new Array(3)
-  for(var i=0; i<3; ++i) {
-    result[i] = Math.min(Math.max(v[i], -1e8), 1e8)
-  }
-  return result
-}
-
 function ScatterPlotPickResult(index, position) {
   this.index = index
   this.dataCoordinate = this.position = position
 }
 
-var MAX_OPACITY = 1
-
 function fixOpacity(a) {
-  if(a === true) return MAX_OPACITY
-  if(a > MAX_OPACITY) return MAX_OPACITY
+  if(a === true) return 1
+  if(a > 1) return 1
   return a
 }
 
@@ -85,11 +75,13 @@ function PointCloud(
   this.vertexCount     = 0
   this.lineVertexCount = 0
 
-  this.opacity         = MAX_OPACITY
+  this.opacity         = 1
+  this.hasAlpha        = false
 
   this.lineWidth       = 0
   this.projectScale    = [2.0/3.0, 2.0/3.0, 2.0/3.0]
-  this.projectOpacity  = [MAX_OPACITY, MAX_OPACITY, MAX_OPACITY]
+  this.projectOpacity  = [1, 1, 1]
+  this.projectHasAlpha  = false
 
   this.pickId                = 0
   this.pickPerspectiveShader = pickPerspectiveShader
@@ -126,11 +118,11 @@ proto.setPickBase = function(pickBase) {
 }
 
 proto.isTransparent = function() {
-  if(this.opacity < MAX_OPACITY)  {
+  if(this.hasAlpha)  {
     return true
   }
   for(var i=0; i<3; ++i) {
-    if(this.axesProject[i] && this.projectOpacity[i] < MAX_OPACITY) {
+    if(this.axesProject[i] && this.projectHasAlpha) {
       return true
     }
   }
@@ -138,11 +130,11 @@ proto.isTransparent = function() {
 }
 
 proto.isOpaque = function() {
-  if(this.opacity >= MAX_OPACITY)  {
+  if(!this.hasAlpha)  {
     return true
   }
   for(var i=0; i<3; ++i) {
-    if(this.axesProject[i] && this.projectOpacity[i] >= MAX_OPACITY) {
+    if(this.axesProject[i] && !this.projectHasAlpha) {
       return true
     }
   }
@@ -311,13 +303,11 @@ var CLIP_GROUP    = [NEG_INFINITY3, POS_INFINITY3]
 function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
   var gl = points.gl
 
-
-
-  if(transparent === (points.projectOpacity < MAX_OPACITY) || forceDraw) {
+  if(transparent === points.projectHasAlpha || forceDraw) {
     drawProject(pshader, points, camera)
   }
 
-  if(transparent === (points.opacity < MAX_OPACITY) || forceDraw) {
+  if(transparent === points.hasAlpha || forceDraw) {
 
     shader.bind()
     var uniforms = shader.uniforms
@@ -468,6 +458,8 @@ proto.update = function(options) {
       this.projectScale = [s,s,s]
     }
   }
+
+  this.projectHasAlpha = false // default to no transparent draw
   if('projectOpacity' in options) {
     if(Array.isArray(options.projectOpacity)) {
       this.projectOpacity = options.projectOpacity.slice()
@@ -477,10 +469,18 @@ proto.update = function(options) {
     }
     for(var i=0; i<3; ++i) {
       this.projectOpacity[i] = fixOpacity(this.projectOpacity[i]);
+      if(this.projectOpacity[i] < 1) {
+        this.projectHasAlpha = true;
+      }
     }
   }
+
+  this.hasAlpha = false // default to no transparent draw
   if('opacity' in options) {
     this.opacity = fixOpacity(options.opacity)
+    if(this.opacity < 1) {
+      this.hasAlpha = true;
+    }
   }
 
   //Set dirty flag
@@ -614,6 +614,7 @@ proto.update = function(options) {
           for(var j=0; j<4; ++j) {
             color[j] = c[j]
           }
+          if(!this.hasAlpha && c[3] < 1) this.hasAlpha = true
         }
       } else {
         color[0] = color[1] = color[2] = 0
@@ -644,6 +645,7 @@ proto.update = function(options) {
           for(var j=0; j<4; ++j) {
             lineColor[j] = c[j]
           }
+          if(!this.hasAlpha && c[3] < 1) this.hasAlpha = true
         }
       } else {
         lineColor[0] = lineColor[1] = lineColor[2] = 0

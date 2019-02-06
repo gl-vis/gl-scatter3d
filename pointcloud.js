@@ -559,8 +559,6 @@ proto.update = function(options) {
     var isColorArray      = Array.isArray(colors)     && Array.isArray(colors[0])
     var isLineColorArray  = Array.isArray(lineColors) && Array.isArray(lineColors[0])
 
-  var preOpacity = this.opacity
-
   fill_loop:
     for(var i=0; i<numPoints; ++i) {
       //Increment pickCounter

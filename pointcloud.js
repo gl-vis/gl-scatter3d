@@ -181,7 +181,7 @@ function getClipBounds(bounds) {
   return result
 }
 
-function drawProject(shader, points, camera) {
+function drawProject(shader, points, camera, pixelRatio) {
   var axesProject = points.axesProject
 
   var gl         = points.gl
@@ -210,7 +210,7 @@ function drawProject(shader, points, camera) {
   uniforms.highlightScale = points.highlightScale
   uniforms.clipBounds     = clipBounds
   uniforms.pickGroup      = points.pickId / 255.0
-  uniforms.pixelRatio     = points.pixelRatio
+  uniforms.pixelRatio     = pixelRatio
 
   for(var i=0; i<3; ++i) {
     if(!axesProject[i]) {
@@ -287,7 +287,7 @@ function drawProject(shader, points, camera) {
 
     //Draw edges
     if(points.lineWidth > 0) {
-      gl.lineWidth(points.lineWidth)
+      gl.lineWidth(points.lineWidth * pixelRatio)
       points.vao.draw(gl.LINES, points.lineVertexCount, points.vertexCount)
     }
 
@@ -300,7 +300,7 @@ var NEG_INFINITY3 = [-1e8, -1e8, -1e8]
 var POS_INFINITY3 = [1e8, 1e8, 1e8]
 var CLIP_GROUP    = [NEG_INFINITY3, POS_INFINITY3]
 
-function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
+function drawFull(shader, pshader, points, camera, pixelRatio, transparent, forceDraw) {
   var gl = points.gl
 
   if(transparent === points.projectHasAlpha || forceDraw) {
@@ -329,7 +329,7 @@ function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
     uniforms.opacity    = points.opacity
     uniforms.pickGroup  = points.pickId / 255.0
 
-    uniforms.pixelRatio = points.pixelRatio
+    uniforms.pixelRatio = pixelRatio
 
     points.vao.bind()
 
@@ -338,7 +338,7 @@ function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
 
     //Draw edges
     if(points.lineWidth > 0) {
-      gl.lineWidth(points.lineWidth)
+      gl.lineWidth(points.lineWidth * pixelRatio)
       points.vao.draw(gl.LINES, points.lineVertexCount, points.vertexCount)
     }
 
@@ -350,17 +350,17 @@ function drawFull(shader, pshader, points, camera, transparent, forceDraw) {
 
 proto.draw = function(camera) {
   var shader = this.useOrtho ? this.orthoShader : this.shader
-  drawFull(shader, this.projectShader, this, camera, false, false)
+  drawFull(shader, this.projectShader, this, camera, this.pixelRatio, false, false)
 }
 
 proto.drawTransparent = function(camera) {
   var shader = this.useOrtho ? this.orthoShader : this.shader
-  drawFull(shader, this.projectShader, this, camera, true, false)
+  drawFull(shader, this.projectShader, this, camera, this.pixelRatio, true, false)
 }
 
 proto.drawPick = function(camera) {
   var shader = this.useOrtho ? this.pickOrthoShader : this.pickPerspectiveShader
-  drawFull(shader, this.pickProjectShader, this, camera, true, true)
+  drawFull(shader, this.pickProjectShader, this, camera, 1, true, true)
 }
 
 proto.pick = function(selected) {
@@ -397,7 +397,7 @@ proto.highlight = function(selection) {
   }
 }
 
-function get_glyphData(glyphs, index, font) {
+function get_glyphData(glyphs, index, font, pixelRatio) {
   var str
 
   // use the data if presented in an array
@@ -419,7 +419,7 @@ function get_glyphData(glyphs, index, font) {
     visible = false
   }
 
-  var glyph = getGlyph(str, font)
+  var glyph = getGlyph(str, font, pixelRatio)
 
   return { mesh:glyph[0],
           lines:glyph[1],
@@ -541,7 +541,7 @@ proto.update = function(options) {
         }
       }
 
-      var glyphData = get_glyphData(glyphs, i, font)
+      var glyphData = get_glyphData(glyphs, i, font, this.pixelRatio)
 
       var glyphMesh   = glyphData.mesh
       var glyphLines  = glyphData.lines
@@ -584,7 +584,7 @@ proto.update = function(options) {
         lowerBound[j] = Math.min(lowerBound[j], x[j])
       }
 
-      var glyphData = get_glyphData(glyphs, i, font)
+      var glyphData = get_glyphData(glyphs, i, font, this.pixelRatio)
 
       var glyphMesh   = glyphData.mesh
       var glyphLines  = glyphData.lines

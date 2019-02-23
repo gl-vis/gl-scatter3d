@@ -304,7 +304,7 @@ function drawFull(shader, pshader, points, camera, pixelRatio, transparent, forc
   var gl = points.gl
 
   if(transparent === points.projectHasAlpha || forceDraw) {
-    drawProject(pshader, points, camera)
+    drawProject(pshader, points, camera, pixelRatio)
   }
 
   if(transparent === points.hasAlpha || forceDraw) {

@@ -182,9 +182,6 @@ function getClipBounds(bounds) {
 }
 
 function drawProject(shader, points, camera, pixelRatio) {
-
-  pixelRatio = pixelRatio || 1
-
   var axesProject = points.axesProject
 
   var gl         = points.gl

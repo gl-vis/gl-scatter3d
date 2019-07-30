@@ -6,7 +6,6 @@ uniform vec3 fragClipBounds[2];
 uniform float opacity;
 
 varying vec4 interpColor;
-varying vec4 pickId;
 varying vec3 dataCoordinate;
 
 void main() {

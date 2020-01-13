@@ -9,9 +9,10 @@ varying vec4 interpColor;
 varying vec3 dataCoordinate;
 
 void main() {
+  float alpha = interpColor.a * opacity;
   if (
     outOfRange(fragClipBounds[0], fragClipBounds[1], dataCoordinate) ||
-    interpColor.a * opacity == 0.
+    alpha == 0.
   ) discard;
-  gl_FragColor = interpColor * opacity;
+  gl_FragColor = vec4(interpColor.rgb, alpha);
 }

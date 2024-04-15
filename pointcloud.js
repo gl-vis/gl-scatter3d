@@ -490,7 +490,14 @@ proto.update = function(options) {
   var points = options.position
 
   //Text font
-  var font      = options.font      || 'normal'
+  var font = {
+    family: options.font || 'normal',
+    style: options.fontStyle || 'normal',
+    weight: options.fontWeight || 'normal',
+    stretch: options.fontStretch || 'normal',
+    variant: options.fontVariant || 'normal'
+  }
+
   var alignment = options.alignment || [0,0]
 
   var alignmentX;

@@ -494,7 +494,6 @@ proto.update = function(options) {
     family: options.font || 'normal',
     style: options.fontStyle || 'normal',
     weight: options.fontWeight || 'normal',
-    stretch: options.fontStretch || 'normal',
     variant: options.fontVariant || 'normal'
   }
 

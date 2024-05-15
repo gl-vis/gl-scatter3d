@@ -29,9 +29,9 @@ void main() {
       lscale *= highlightScale;
     }
 
-    vec4 clipCenter   = projection * view * model * vec4(position, 1);
+    vec4 clipCenter   = projection * (view * (model * vec4(position, 1)));
     vec3 dataPosition = position + 0.5*lscale*(axes[0] * glyph.x + axes[1] * glyph.y) * clipCenter.w * screenSize.y;
-    vec4 clipPosition = projection * view * model * vec4(dataPosition, 1);
+    vec4 clipPosition = projection * (view * (model * vec4(dataPosition, 1)));
 
     gl_Position = clipPosition;
     interpColor = color;

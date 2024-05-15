@@ -1,6 +1,6 @@
 {
   "name": "gl-scatter3d",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "3D scatter plot",
   "main": "pointcloud.js",
   "directories": {

@@ -51,7 +51,7 @@ Constructs a scatter plot with the given parameters.  `options` is an object wit
 * `gl` is a WebGL context
 * `position` (Required) an array of length 3 arrays encoding the position of the points in the scatter plot.
 * `color` A length 3 array encoding the color of the points in the scatter plot.  To set colors per point, pass an array instead.  Default is `[0,0,0]`
-* `glyph` The glyph of each point.  This is a UTF8 string representing some shape.  Per point glyphs can be specified by passing an array.  The default glyph is a circle, `"●"`.  For more glyph ideas, check out the [unicode character set](http://unicode-table.com/en/).  Some other fun suggestions: `"☢", "☯", "❤", "▲", "⚑"`. 
+* `glyph` The glyph of each point.  This is a UTF8 string representing some shape.  Per point glyphs can be specified by passing an array.  The default glyph is a circle, `"●"`.  For more glyph ideas, check out the [unicode character set](https://symbl.cc/en/).  Some other fun suggestions: `"☢", "☯", "❤", "▲", "⚑"`. 
 * `size` The size of each point, or specified per-point using an array.  In orthographic, this is in screen coordinates, or in perspective this is in world coordinates. Default is `0.1`
 * `orthographic` A flag, which if set to `true` causes the points to be drawn without perspective scaling.
 * `lineWidth` the width of the outline (set to 0 for no outline) Default is `0`

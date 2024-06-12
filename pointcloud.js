@@ -335,7 +335,7 @@ function drawFull(shader, pshader, points, camera, pixelRatio, transparent, forc
     uniforms.highlightScale = points.highlightScale
 
     uniforms.fragClipBounds = CLIP_GROUP
-    uniforms.clipBounds     = points.axes.bounds
+    uniforms.clipBounds     = points.axesBounds
 
     uniforms.opacity    = points.opacity
     uniforms.pickGroup  = points.pickId / 255.0
